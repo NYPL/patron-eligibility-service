@@ -1,12 +1,12 @@
-#NYPL Patron Eligibility Service
+# NYPL Patron Eligibility Service
 
 This package is intended to be used as a Lambda-based Node.js service ??using??
 
-##Requirements
+## Requirements
 
-*Node.js >= ??
+* Node.js >= ??
 
-##Installation
+## Installation
 1. Clone to Repo
 2. Install required dependencies.
   * Run npm install to install Node.js packages
@@ -14,24 +14,24 @@ This package is intended to be used as a Lambda-based Node.js service ??using??
 3. Copy the `config/development.env.sample` file to `config/development.env`
 4. Replace sample values in `config/development.env`. These should be encrypted (see instructions on AWS encryption below)
 
-##Configuration
+## Configuration
 `config/development.env` is used to set Sierra credentials
 
-##Usage
-###Process a Lambda event?
-###Run as a Web server
+## Usage
+### Process a Lambda event?
+### Run as a Web server
 
 Run `node app-local.js --envfile config/development.env --profile [profile]`
 
 You can then make a request to `http://localhost:3003/api/v0.1/patrons/:id/hold-request-eligibility`
 
-##Testing
+## Testing
 Testing is great
 
-##Deployment
+## Deployment
 Deployment is even better
 
-##Encryption
+## Encryption
 To encrypt a plaintext secret:
 
 * Look up the account's KMS encryption key ARN:
