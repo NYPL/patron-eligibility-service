@@ -12,16 +12,16 @@ app.get('/api/v0.1/patrons/:id/hold-request-eligibility', (req, res) => {
 })
 
 const respond = (res, _resp, params) => {
-    var contentType = 'application/ld+json'
-    if (params.ext === 'ntriples') contentType = 'text/plain'
+  var contentType = 'application/ld+json'
+  if (params.ext === 'ntriples') contentType = 'text/plain'
 
-    var resp = _resp
-    if (contentType !== 'text/plain') resp = JSON.stringify(_resp, null, 2)
+  var resp = _resp
+  if (contentType !== 'text/plain') resp = JSON.stringify(_resp, null, 2)
 
-    res.type(contentType)
-    res.status(200).send(resp)
-    return true
-  }
+  res.type(contentType)
+  res.status(200).send(resp)
+  return true
+}
 
 // const port = process.env.PORT || config['port']
 //

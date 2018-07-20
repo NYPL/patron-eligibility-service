@@ -53,15 +53,14 @@ function getPatronHolds (patronId) {
   return 'not yet implemented'
 }
 
-
-function setConfigValue(config, envVariable, key) {
+function setConfigValue (config, envVariable, key) {
   return decrypt(process.env[envVariable]).then(result => config[key] = result)
 }
 
-function config() {
+function config () {
   const config = {'base': process.env.SIERRA_BASE}
   return Promise.all([setConfigValue(config, 'SIERRA_KEY', 'key'), setConfigValue(config, 'SIERRA_SECRET', 'secret')])
-          .then(values => wrapper.loadConfig(config))
+    .then(values => wrapper.loadConfig(config))
 }
 
 function checkEligibility (patronId) {
