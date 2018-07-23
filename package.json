@@ -4,18 +4,31 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/standard --env mocha --globals expect && NODE_ENV=test ./node_modules/.bin/mocha test --exit",
+    "deploy-development": "./node_modules/.bin/node-lambda deploy -e development -f ./config/development.env --role arn:aws:iam::224280085904:role/lambda_basic_execution --profile nypl-sandbox"
   },
   "author": "",
   "license": "ISC",
+  "standard": {
+    "globals": [
+      "after",
+      "before",
+      "describe",
+      "expect",
+      "it"
+    ]
+  },
   "dependencies": {
     "@nypl/sierra-wrapper": "^0.3.0",
     "aws-sdk": "^2.118.1",
     "aws-serverless-express": "^3.2.0",
+    "chai": "^4.1.2",
     "dotenv": "^6.0.0",
     "eslint": "^5.1.0",
     "express": "^4.16.3",
-    "optimist": "^0.6.1"
+    "mocha": "^5.2.0",
+    "optimist": "^0.6.1",
+    "sinon": "^6.1.4"
   },
   "devDependencies": {
     "eslint-config-standard": "^11.0.0",
@@ -23,6 +36,7 @@
     "eslint-plugin-node": "^7.0.1",
     "eslint-plugin-promise": "^3.8.0",
     "eslint-plugin-standard": "^3.1.0",
+    "lambda-tester": "^3.4.1",
     "node-lambda": "^0.11.7"
   }
 }

@@ -26,7 +26,8 @@ Run `node app-local.js --envfile config/development.env --profile [profile]`
 You can then make a request to `http://localhost:3003/api/v0.1/patrons/:id/hold-request-eligibility`
 
 ## Testing
-Testing is great
+The test suite uses lambda-tester to run tests against the handler interface.
+`npm test`
 
 ## Deployment
 Deployment is even better

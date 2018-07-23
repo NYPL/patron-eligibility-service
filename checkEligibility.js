@@ -1,5 +1,5 @@
 var wrapper = require('@nypl/sierra-wrapper')
-const decrypt = require('./lib/kms-helper').decrypt
+const kms = require('./lib/kms-helper')
 
 function initialCheck (patronId) {
   const body = {
@@ -54,17 +54,21 @@ function getPatronHolds (patronId) {
 }
 
 function setConfigValue (config, envVariable, key) {
-  return decrypt(process.env[envVariable]).then(result => config[key] = result)
+  console.log('setting config')
+  return kms.decrypt(process.env[envVariable]).then(result => { config[key] = result; return null })
 }
 
 function config () {
+  console.log('config')
   const config = {'base': process.env.SIERRA_BASE}
   return Promise.all([setConfigValue(config, 'SIERRA_KEY', 'key'), setConfigValue(config, 'SIERRA_SECRET', 'secret')])
-    .then(values => wrapper.loadConfig(config))
+    .then(values => { console.log(65); wrapper.loadConfig(config) })
 }
 
 function checkEligibility (patronId) {
+  console.log('checking')
   return config().then(() => {
+    console.log('line 69')
     return wrapper.promiseAuth((error, results) => {
       if (error) console.log('promiseAuthError', error)
       return new Promise((resolve, reject) => {
