@@ -22,7 +22,7 @@ function initialCheck (patronId) {
 }
 
 function handleEligible () {
-  return { eligibility: 'eligible to place holds' }
+  return 'eligible to place holds'
 }
 
 function getPatronInfo (patronId) {
@@ -46,8 +46,7 @@ function finesBlocksOrExpiration (info) {
 }
 
 function handleFinesBlocksOrExpiration (data) {
-  // return JSON.stringify(data)
-  return Object.assign({ eligibility: 'ineligible' }, data)
+  return JSON.stringify(data)
 }
 
 function getPatronHolds (patronId) {
