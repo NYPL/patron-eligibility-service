@@ -1,10 +1,10 @@
 # NYPL Patron Eligibility Service
 
-This package is intended to be used as a Lambda-based Node.js service ??using??
+This package is intended to be used as a Lambda-based Node.js service.
 
 ## Requirements
 
-* Node.js >= ??
+* Node.js >= 6.10
 
 ## Installation
 1. Clone to Repo
