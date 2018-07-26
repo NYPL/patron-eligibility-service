@@ -1,4 +1,5 @@
 var wrapper = require('@nypl/sierra-wrapper')
+var logger = require('./logger')
 const kms = require('./lib/kms-helper')
 
 function initialCheck (patronId) {
@@ -11,7 +12,6 @@ function initialCheck (patronId) {
       pickupLocation: 'maii2'
     }
   }
-  console.log(wrapper)
   return wrapper.apiPost(`patrons/${patronId}/holds/requests`, body, (errorBibReq, results) => {
     if (errorBibReq) {
       return new Promise((resolve, reject) => {
@@ -28,7 +28,7 @@ function handleEligible () {
 function getPatronInfo (patronId) {
   return wrapper.apiGet(`patrons/${patronId}`, (errorBibReq, results) => {
     if (errorBibReq) {
-      console.log(errorBibReq)
+      logger.error('error getting patron info: ', errorBibReq)
     }
     return new Promise((resolve, reject) => {
       resolve(results)
@@ -55,23 +55,19 @@ function getPatronHolds (patronId) {
 }
 
 function setConfigValue (config, envVariable, key) {
-  console.log('setting config')
   return kms.decrypt(process.env[envVariable]).then(result => { config[key] = result; return null })
 }
 
 function config () {
-  console.log('config')
   const config = {'base': process.env.SIERRA_BASE}
   return Promise.all([setConfigValue(config, 'SIERRA_KEY', 'key'), setConfigValue(config, 'SIERRA_SECRET', 'secret')])
-    .then(values => { console.log(65); wrapper.loadConfig(config) })
+    .then(values => { wrapper.loadConfig(config) })
 }
 
 function checkEligibility (patronId) {
-  console.log('checking')
   return config().then(() => {
-    console.log('line 69')
     return wrapper.promiseAuth((error, results) => {
-      if (error) console.log('promiseAuthError', error)
+      if (error) logger.error('promiseAuthError', error)
       return new Promise((resolve, reject) => {
         initialCheck(patronId).then((eligible) => {
           if (eligible) {
