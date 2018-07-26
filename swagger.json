@@ -60,7 +60,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Response in json",
+            "description": "Successful operation",
             "schema": {
               "$ref": "#/definitions/PatronEligibilityResponse"
             }
