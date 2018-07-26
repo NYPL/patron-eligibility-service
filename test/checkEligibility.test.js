@@ -67,7 +67,7 @@ describe('Lambda index handler', function () {
       .event({ path: '/api/v0.1/patrons/1001006/hold-request-eligibility' })
       .expectResult((result) => {
         console.log(JSON.stringify(result, null, 2))
-        expect(result.body).to.equal('"eligible to place holds"')
+        expect(result.body).to.equal('{\n  "eligibility": true\n}')
       })
   })
   it('PatronEligibility responds with a string representation of an errors object for an ineligible patron', function () {
@@ -75,7 +75,7 @@ describe('Lambda index handler', function () {
       .event({ path: '/api/v0.1/patrons/5459252/hold-request-eligibility' })
       .expectResult((result) => {
         console.log('second: ', JSON.stringify(result, null, 2))
-        expect(result.body).to.equal('"{\\"expired\\":false,\\"blocked\\":true,\\"moneyOwed\\":true}"')
+        expect(result.body).to.equal('{\n  "eligibility": false,\n  "expired": false,\n  "blocked": true,\n  "moneyOwed": true\n}')
       })
   })
 })
