@@ -1,0 +1,73 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "0.1",
+    "title": "Patron Holds Eligibility API",
+    "description": "Determine whether a patron is eligible to place holds"
+  },
+  "basePath": "/api",
+  "schemes": [
+    "http"
+  ],
+  "tags": [
+    {
+      "name": "hold-request-eligibilty",
+      "description": "Patrons Holds Eligibility API"
+    }
+  ],
+  "paths": {
+    "/v0.1/patron/{id}/hold-request-eligibility": {
+      "get": {
+        "tags": [
+          "patron"
+        ],
+        "summary": "Get information about whether patron can place holds",
+        "description": "Find out if a patron is eligible to place holds and what issues their account has",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Patron ID",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": "application/json",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "eligibility": {
+                  "type": "string",
+                  "example": "ineligible"
+                },
+                "expired": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "blocked": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "moneyOwed": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_auth": "openid read:patron"
+          }
+        ]
+      }
+    }
+  }
+}

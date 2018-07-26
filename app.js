@@ -2,8 +2,13 @@ const express = require('express')
 const awsServerlessExpressMiddleware = require('aws-serverless-express/middleware')
 const app = express()
 const checkEligibility = require('./checkEligibility.js').checkEligibility
+const swaggerDocs = require('./swagger.json')
 
 app.use(awsServerlessExpressMiddleware.eventContext())
+
+app.get('/docs/patron-hold-request-eligibility', function (req, res) {
+  res.send(swaggerDocs)
+})
 
 app.get('/api/v0.1/patrons/:id/hold-request-eligibility', (req, res) => {
   const id = req.params.id
@@ -12,7 +17,7 @@ app.get('/api/v0.1/patrons/:id/hold-request-eligibility', (req, res) => {
 })
 
 const respond = (res, _resp, params) => {
-  var contentType = 'application/ld+json'
+  var contentType = 'application/json'
   if (params.ext === 'ntriples') contentType = 'text/plain'
 
   var resp = _resp
