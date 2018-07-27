@@ -41,6 +41,23 @@ Our Travis CI/CD pipeline will execute the following steps for each deployment t
 * Build Lambda deployment packages
 * Execute the`deploy` hook for `development`, `qa`, or `master`
 * Developers do not need to manually deploy the application if Travis is successful
+
+## Git Workflow
+We use three branches for deployment: `development`, `qa`, `master`.
+
+If we have a new feature to add, the suggested workflow is:
+- Create branch for new feature `git checkout -b new-feature` off the `development` branch.
+- Create Pull Request pointing to the `development` branch.
+- To test the branch on the development server, follow the instructions below for deploying to Development
+- Once the Pull Request is accepted merge it into `development`
+- Update version in `development` branch:
+  - Decide on appropriate new version number
+  - Add notes to CHANGELOG.md & update `package.json` version number. Commit.
+  - `git push origin development`
+- Eventually merge `development` into `qa`
+- Eventually merge `qa` into `master`
+- Add git tag to `master` (e.g. `git tag -a v1.4.3; git push --tags`)
+
 ## Encryption
 To encrypt a plaintext secret:
 
