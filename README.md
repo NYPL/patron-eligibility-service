@@ -33,7 +33,8 @@ The test suite uses lambda-tester to run tests against the handler interface.
 
 Three deploy scripts are registered in `package.json`:
 `npm run deploy-[development|qa|production]`
-Travis CI is configured to run out build and deployment process on AWS.
+
+Travis CI is configured to run our build and deployment process on AWS.
 
 Our Travis CI/CD pipeline will execute the following steps for each deployment trigger:
 * Run unit test coverage
