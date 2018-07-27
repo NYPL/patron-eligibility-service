@@ -7,7 +7,6 @@ const wrapper = require('@nypl/sierra-wrapper')
 describe('Lambda index handler', function () {
   before(function () {
     sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
-      console.log('decrypting')
       return Promise.resolve('fake decrypted secret')
     })
     sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
@@ -57,7 +56,6 @@ describe('Lambda index handler', function () {
       return new Promise((resolve, reject) => { resolve(cb(body, false)) })
     })
     sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => {
-      console.log('fake auth')
       return cb(null, null)
     })
   })
@@ -66,7 +64,6 @@ describe('Lambda index handler', function () {
     return LambdaTester(handler)
       .event({ path: '/api/v0.1/patrons/1001006/hold-request-eligibility' })
       .expectResult((result) => {
-        console.log(JSON.stringify(result, null, 2))
         expect(result.body).to.equal('{\n  "eligibility": true\n}')
       })
   })
@@ -74,7 +71,6 @@ describe('Lambda index handler', function () {
     return LambdaTester(handler)
       .event({ path: '/api/v0.1/patrons/5459252/hold-request-eligibility' })
       .expectResult((result) => {
-        console.log('second: ', JSON.stringify(result, null, 2))
         expect(result.body).to.equal('{\n  "eligibility": false,\n  "expired": false,\n  "blocked": true,\n  "moneyOwed": true\n}')
       })
   })

@@ -4,13 +4,11 @@ const server = awsServerlessExpress.createServer(app)
 
 module.exports = {
   handler: (lambdaEvent, context, callback) => {
-    console.log('handler')
     try {
       context.callbackWaitsForEmptyEventLoop = false
       context.succeed = (response) => {
         callback(null, response)
       }
-      console.log(12)
       return awsServerlessExpress.proxy(server, lambdaEvent, context)
     } catch (error) {
       console.error('=====> Error: ', error)
