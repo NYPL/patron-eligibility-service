@@ -7,37 +7,40 @@ cache:
   directories:
   - node_modules
 before_deploy:
-- echo "All unit tests passed; Preparing to deploy $TRAVIS_BRANCH"
+- echo "All unit tests passed; Preparing to deploy $ENVIRONMENT_NAME"
 after_success:
-- if [ "$TRAVIS_BRANCH" == "development" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_DEVELOPMENT;
+- ENVIRONMENT_NAME=$TRAVIS_BRANCH
+- if [ "$TRAVIS_BRANCH" == "master" ]; then ENVIRONMENT_NAME=production; fi
+- if [ "$ENVIRONMENT_NAME" == "development" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_DEVELOPMENT;
   AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_DEVELOPMENT; fi
-- if [ "$TRAVIS_BRANCH" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
+- if [ "$ENVIRONMENT_NAME" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
   fi
-- if [ "$TRAVIS_BRANCH" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
+- if [ "$ENVIRONMENT_NAME" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
   AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_PRODUCTION; fi
+- echo "Env name is $ENVIRONMENT_NAME and travis is $TRAVIS_BRANCH"
 deploy:
 - provider: script
   skip_cleanup: true
-  script: "./scripts/travis-deploy.sh $TRAVIS_BRANCH"
+  script: "./scripts/travis-deploy.sh $ENVIRONMENT_NAME"
   on:
     all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
 - provider: script
-  script: ./node_modules/.bin/node-lambda package -e "$TRAVIS_BRANCH"
+  script: ./node_modules/.bin/node-lambda package -e "$ENVIRONMENT_NAME"
   skip_cleanup: true
   on:
     all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
 - provider: s3
   access_key_id: "${!AWS_KEY_VAR}"
   secret_access_key: "${!AWS_SECRET_VAR}"
-  bucket: nypl-travis-builds-$TRAVIS_BRANCH
+  bucket: nypl-travis-builds-$ENVIRONMENT_NAME
   skip_cleanup: true
   local_dir: build
   on:
     all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^development|qa|production$"
-after_deploy: echo "Successfully executed deploy trigger for $TRAVIS_BRANCH"
+    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+after_deploy: echo "Successfully executed deploy trigger for $ENVIRONMENT_NAME"
 env:
   global:
   - secure: UCzOSDd97Sm5dBb+uQtnMyCJnzCzvuw+dhyeAzLtDwNT3uTQYhXakFurRRjpJsdY7BRWnhedZUen3fL5IuceBJuMX38ELkvW72AOu68gYpa/65nB0UxEzM0y+u3uf0BvrTl7zXWPZrxtgphQ7GyiVkvu+IyMJ5JzgFLIn6f49WAZ/KOHxZp7VeW0X9aLDeb/CtddcdYJk98fyQGHd3bdQ6viK7UQGRkpusQn8a9kB25kEmtXSzKFTQT1M81WxthMke+o51z86hqZdMSPeIvyN6NlBeJIB8Mb1k1YzDZq6z04sBlFkl/hmi13FuLqlAFYLqc1HVSq3wv6dlqiV9TPTBiwFjmuQRFIY7JBPISGCMeYPhO3Fc2RdYZpAE8M71QVbc+tBMfLuN/bfrqrxTMYZrd+xYhsPWsOCS+em4cobcPIm+uwGP5kXONgsmL1BBrLcBkYeCmZXDgT4utXIKtc0s696U/R8ahpg7CN/zgSIy/ed5BrecxWv7FnFyDdYQQBIFDIv7FAqYpiw58SskBYkh+OTYsQc3fePkDl1sybCiG59aH7iETUxTNCP9T9iUZAqoni/3D5NHhwKBajg2m3QnqC9vPxIlAcl8wlmykilYeHQ3rkNt5OmtVdqj2j+3afg+wohjZegggqvtottb7HoypczSJlTW7TaLVq3+Cy+m8=
