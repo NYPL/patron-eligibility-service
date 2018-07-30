@@ -10,7 +10,7 @@ before_deploy:
 - echo "All unit tests passed; Preparing to deploy $ENVIRONMENT_NAME"
 after_success:
 - ENVIRONMENT_NAME=$TRAVIS_BRANCH
-- if [ "$TRAVIS_production" == "master"]; then ENVIRONMENT_NAME=production; fi
+- if [ "$TRAVIS_BRANCH" == "master"]; then ENVIRONMENT_NAME=production; fi
 - if [ "$ENVIRONMENT_NAME" == "development" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_DEVELOPMENT;
   AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_DEVELOPMENT; fi
 - if [ "$ENVIRONMENT_NAME" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
