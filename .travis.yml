@@ -17,6 +17,7 @@ after_success:
   fi
 - if [ "$ENVIRONMENT_NAME" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
   AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_PRODUCTION; fi
+- echo "Env name is $ENVIRONMENT_NAME and travis is $TRAVIS_BRANCH"
 deploy:
 - provider: script
   skip_cleanup: true
