@@ -1,4 +1,5 @@
 var wrapper = require('@nypl/sierra-wrapper')
+const nyplCoreObjects = require('@nypl/nypl-core-objects')
 var logger = require('./logger')
 const kms = require('./lib/kms-helper')
 
@@ -36,13 +37,44 @@ function getPatronInfo (patronId) {
   })
 }
 
-function finesBlocksOrExpiration (info) {
+/**
+ *  Given an patron-info hash (i.e. one retrieved via patrons/{patronId}),
+ *  returns a Hash with the following boolean properties:
+ *   - expired: True if card expird
+ *   - blocked: True if card has blocks
+ *   - moneyOwed: True if card has > $15 fines
+ *   - ptypeDisallowsHolds: True if patron ptype disallows holds (e.g. ptype 120, 121)
+ *  Essentially, if Object.keys(hash).map((
+ */
+function identifyPatronIssues (info) {
   info = info.data.entries[0]
-  return {
+  const issues = {
     expired: new Date(info.expirationDate) < new Date(),
     blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
-    moneyOwed: info.moneyOwed > 15 // may want to change this
+    moneyOwed: info.moneyOwed > 15, // may want to change this
+    ptypeDisallowsHolds: ptypeDisallowsHolds(info.patronType)
   }
+
+  // Set a single property to check for consumers that don't care *what* issues
+  // there are but only that there are issues:
+  issues.hasIssues = Object.keys(issues).filter((name) => issues[name]).length > 0
+
+  return issues
+}
+
+/**
+ *  For a given ptype (e.g. 10, 120), returns `true` if the ptype does not allow
+ *  Sierra holds (which is indicated by the absense of any
+ *  `nypl:deliveryLocationAccess` statement)
+ */
+function ptypeDisallowsHolds (ptype) {
+  const ptypeMapping = nyplCoreObjects('by-patron-type')
+  if (!ptypeMapping) throw new Error('Could not load patron types')
+
+  if (!ptypeMapping[ptype]) throw new Error(`Could not find ptype '${ptype}' in ptype mapping`)
+  const locationTypes = ptypeMapping[ptype].accessibleDeliveryLocationTypes
+
+  return !locationTypes || (Array.isArray(locationTypes) && locationTypes.length === 0)
 }
 
 function handleFinesBlocksOrExpiration (data) {
@@ -74,8 +106,8 @@ function checkEligibility (patronId) {
             resolve(handleEligible())
           } else {
             getPatronInfo(patronId).then((info) => {
-              const issues = finesBlocksOrExpiration(info)
-              if (issues.expired || issues.blocked || issues.moneyOwed) {
+              const issues = identifyPatronIssues(info)
+              if (issues.hasIssues) {
                 resolve(handleFinesBlocksOrExpiration(issues))
               } else {
                 resolve(getPatronHolds(patronId))
@@ -88,4 +120,8 @@ function checkEligibility (patronId) {
   })
 }
 
-exports.checkEligibility = checkEligibility
+module.exports = {
+  checkEligibility,
+  ptypeDisallowsHolds,
+  identifyPatronIssues
+}
