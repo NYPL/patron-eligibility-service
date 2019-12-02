@@ -68,7 +68,7 @@ describe('Lambda index handler', function () {
     return LambdaTester(handler)
       .event({ path: '/api/v0.1/patrons/1001006/hold-request-eligibility' })
       .expectResult((result) => {
-        expect(result.body).to.equal('{\n  "eligibility": true\n}')
+        expect(JSON.parse(result.body)).to.include({ eligibility: true })
       })
   })
   it('PatronEligibility responds with a string representation of an errors object for an ineligible patron', function () {
