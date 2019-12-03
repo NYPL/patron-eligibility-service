@@ -22,7 +22,8 @@ deploy:
   script: "./scripts/travis-deploy.sh $ENVIRONMENT_NAME"
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    # Note: development deploys are disabled:
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 - provider: script
   script: ./node_modules/.bin/node-lambda package -e "$ENVIRONMENT_NAME"
   skip_cleanup: true
