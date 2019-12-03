@@ -3,6 +3,7 @@ const awsServerlessExpressMiddleware = require('aws-serverless-express/middlewar
 const app = express()
 const checkEligibility = require('./checkEligibility.js').checkEligibility
 const swaggerDocs = require('./swagger.json')
+const { SierraError, ParameterError } = require('./lib/errors')
 
 app.use(awsServerlessExpressMiddleware.eventContext())
 
@@ -13,26 +14,32 @@ app.get('/docs/patron-hold-request-eligibility', function (req, res) {
 app.get('/api/v0.1/patrons/:id/hold-request-eligibility', (req, res) => {
   const id = req.params.id
   const params = req.params
-  return checkEligibility(id).then((result) => respond(res, result, params))
+  return checkEligibility(id)
+    .then((result) => respond(res, result, params))
+    .catch((error) => respond(res, error))
 })
 
-const respond = (res, _resp, params) => {
+const respond = (response, result, params) => {
   var contentType = 'application/json'
-  if (params.ext === 'ntriples') contentType = 'text/plain'
+  let httpStatus = 200
 
-  var resp = _resp
-  if (contentType !== 'text/plain') resp = JSON.stringify(_resp, null, 2)
+  if (result instanceof Error) {
+    httpStatus = 500
+    result = {
+      error: result.name,
+      message: result.message
+    }
+  }
+  if (result instanceof ParameterError) {
+    httpStatus = 400
+  } else if (result instanceof SierraError) {
+    httpStatus = 500
+  }
 
-  res.type(contentType)
-  res.status(200).send(resp)
+  response.type(contentType)
+  response.status(httpStatus).send(result)
+
   return true
 }
-
-// const port = process.env.PORT || config['port']
-//
-//   app.listen(port, function () {
-//     console.log(checkEligibility)
-//     console.log('Server started on port ' + port)
-//   })
 
 module.exports = app
