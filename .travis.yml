@@ -9,8 +9,6 @@ before_deploy:
 after_success:
 - ENVIRONMENT_NAME=$TRAVIS_BRANCH
 - if [ "$TRAVIS_BRANCH" == "master" ]; then ENVIRONMENT_NAME=production; fi
-- if [ "$ENVIRONMENT_NAME" == "development" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_DEVELOPMENT;
-  AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_DEVELOPMENT; fi
 - if [ "$ENVIRONMENT_NAME" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
   fi
 - if [ "$ENVIRONMENT_NAME" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
@@ -29,7 +27,7 @@ deploy:
   skip_cleanup: true
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 - provider: s3
   access_key_id: "${!AWS_KEY_VAR}"
   secret_access_key: "${!AWS_SECRET_VAR}"
@@ -38,7 +36,7 @@ deploy:
   local_dir: build
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 after_deploy: echo "Successfully executed deploy trigger for $ENVIRONMENT_NAME"
 env:
   global:
