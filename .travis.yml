@@ -1,8 +1,6 @@
 language: node_js
-node_js:
-- '6.10'
 install: npm install
-script: npm test
+script: LOG_LEVEL=error npm test
 cache:
   directories:
   - node_modules
