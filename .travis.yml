@@ -20,7 +20,6 @@ deploy:
   script: "./scripts/travis-deploy.sh $ENVIRONMENT_NAME"
   on:
     all_branches: true
-    # Note: development deploys are disabled:
     condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 - provider: script
   script: ./node_modules/.bin/node-lambda package -e "$ENVIRONMENT_NAME"
@@ -40,4 +39,4 @@ deploy:
 after_deploy: echo "Successfully executed deploy trigger for $ENVIRONMENT_NAME"
 env:
   global:
-    secure: lzeWEulqWP6wC4VFXIsCfaljL3wIzVwveLdGC69scI55U5EMyuiD54aTCLFIz9ESyBauMsFHhNkuK0TAF+1j3RUJgxAtzoKCSvCOLWeJLZBlP8ynYZW4YC27oP9iQUAB1QmSmFXvDosbs1c0IHK2W3oDu2gNeUyjGq5yXM7I0hr+AdnmMUPcYBQ6u4KSDESKPD0ZyeWXCG1vNbOZMLa9p1Dcjy5UwMsytNbdjfHqspeZG1dkm5WRKoBoHR9q1LDoNznaJg26qLg98iBZsE1k9WlgOd5a8LZB3KnPr4uAxhyToDagpEeQ1/tolEpvsSIHoBUuwVOPQwbecmO7ZH+KrLCvITxHJaJ3qP9AvfhJz0I9IjTPZtp1t6HEapH4APnX//b4J4+W3BbG5HHmJdvdPmtfYAWVDTrZuO4tSHfWqVmuzZ4RRKGKQHEoiP0aSWsg6jf7gAI5QqqVqKqcyV9KKN1FreAV4VK0U5Z6t6nS05PEmMLTNLWISjwmtkNswFxGut3ZTiUJoy69o81hUQRP3q6dKq5d0M7EQmNf8rjJIvfkGnNNQI7BG8yuzsD3mPQ++O+kK1osOPV4+4B24Ko0h0RWtJK8dp01U6u5BEXVfMYHS+CQXKrx3C6MxBXGpr4t41g1Z/+Z55PUE9Rd73KhhEbJh4lHoaLgu1q+HxARsLM=
+    secure: rY7aZojWkR1jEe7ULe0bMJIz30o+JG09d4RqQG7OssqnniD0gyUzD+7tCWE3iPvpomSVsEo2RIb+M6qvZ/O61nvAQNZ5m2hfZSi6GzDtpVYXKP1C5sFtX4K6hJr2+RH7bQ6BQXkzZ3RpG36vDxfbDXabn8voyP+p2G9gMRVb/owl1knQwD60E9CGmbQLOhLU5F08jtbXow/a45+DLGpoQ2v8BLLdrknwlFlErvLPD2vXVqFxrqea9RiklyePe75DUvMjt/VeUQY/XoUwqPlFCh4cGq0/dnT9o9TCsc7KWf9kiGx6OARgFSSq3D7WsyqykxH0iDCTGCH+HkbU8FLdysAkW4nHCcYg/pugJ/gKud1nXf4xoUwVj3rIfnFuZElgqGLkYRHpVielqq13CjqajKB4M6KJhd2oXVGhQfwWnQ5U005Dv1oAAoxdoyEcnaEhwC02H8BHQZSVLa7owWhk5T+D4oubRlbZecaV4Vt48XAvpQIhbrol1ZVNnusidfV2j8N/VW9R+WmdE6BtTWT8ObWugPCpC2lPD4Rdyx6K61KsnMsgB2aUFsa6Y5OfnKxo7KAqBOGuVxnsq1CWo6BbNPo5KDtSxGHYrwtUrCzSj7VjDVoeK+7uYfd9Hwo2pU+7HIkhSfOUBytQ0+P5b7U5P2f5p1WTFXxU3Lf6iQ5f53E=
