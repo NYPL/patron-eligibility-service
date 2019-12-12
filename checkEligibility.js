@@ -4,8 +4,8 @@ var logger = require('./logger')
 const kms = require('./lib/kms-helper')
 const { SierraError, ParameterError } = require('./lib/errors')
 
-function initialCheck (patronId) {
-  logger.debug('Performing initialCheck')
+function patronCanPlaceTestHold (patronId) {
+  logger.debug('Performing patronCanPlaceTestHold')
   const body = {
     json: true,
     method: 'POST',
@@ -24,7 +24,8 @@ function initialCheck (patronId) {
         // If the specific error is the following, the patron's account *can*
         // place holds
         const patronHoldsPossible = errorBibReq.description === 'XCirc error : Bib record cannot be loaded'
-        logger.debug('Finished performing initialCheck with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', errorBibReq)
+
+        logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', errorBibReq)
         resolve(patronHoldsPossible)
       } else {
         // If no error was returned when placing a hold for the above
@@ -42,6 +43,7 @@ function handleEligible () {
 }
 
 function getPatronInfo (patronId) {
+  logger.debug(`Fetching patron info for ${patronId}`)
   // wrapper.apiGet does not always return a Promise, so just use callback interface:
   return new Promise((resolve, reject) => {
     wrapper.apiGet(`patrons/${patronId}`, (errorBibReq, results) => {
@@ -50,6 +52,7 @@ function getPatronInfo (patronId) {
         reject(new ParameterError(`Could not get patron info for patron ${patronId}`))
       }
 
+      logger.debug(`Fetched patron info for ${patronId}`)
       return resolve(results)
     })
   })
@@ -77,6 +80,10 @@ function identifyPatronIssues (info) {
   issues.hasIssues = Object.values(issues).some((v) => v)
 
   return issues
+}
+
+function patronPtypeAllowsHolds (info) {
+  return !identifyPatronIssues(info).ptypeDisallowsHolds
 }
 
 /**
@@ -138,23 +145,55 @@ function sierraLogin () {
   })
 }
 
+/**
+ *  CheckEligibility
+ *  This is the primary method in this module.
+ *
+ *  @param {int} patronId The id patron for whom we wish to determine
+ *         hold-request eligibility.
+ *
+ *  @return {Promise<Hash>} A Promise that resolves a hash with a single
+ *          `eligible` property (boolean) indicating hold-request eligibility.
+ *
+ *  This method checks hold-request eligibility by performing two initial checks in parallel:
+ *   1. Can patron place a test hold on a fake item?
+ *   2. Does patron's ptype allow them to place holds?
+ */
 function checkEligibility (patronId) {
+  let patronInfo = null
+
   return config()
     .then(sierraLogin)
-    .then(() => initialCheck(patronId))
-    .then((eligible) => {
+    .then(() => Promise.all([
+      // Attempt a test hold:
+      patronCanPlaceTestHold(patronId),
+      // Simultaneously fetch patron info:
+      getPatronInfo(patronId)
+        .then((_patronInfo) => {
+          // Save patronInfo for later:
+          patronInfo = _patronInfo
+          // Determine whether/not ptype allowed to place holds:
+          return patronPtypeAllowsHolds(patronInfo)
+        })
+    ])).then((checks) => {
+      const [canPlaceTestHold, ptypeAllowsHolds] = checks
+      const eligible = canPlaceTestHold && ptypeAllowsHolds
+
+      logger.debug(`Result of checks is ${canPlaceTestHold} && ${ptypeAllowsHolds}`)
+
       if (eligible) {
         return handleEligible()
       } else {
-        return getPatronInfo(patronId).then((info) => {
-          const issues = identifyPatronIssues(info)
-          if (issues.hasIssues) {
-            return handlePatronIneligible(issues)
-          } else {
-            return handlePatronIneligible()
-          }
-        })
+        const issues = identifyPatronIssues(patronInfo)
+        if (issues.hasIssues) {
+          return handlePatronIneligible(issues)
+        } else {
+          return handlePatronIneligible()
+        }
       }
+    }).catch((e) => {
+      logger.error('CheckEligibility Encountered error: ', e)
+      throw e
     })
 }
 
