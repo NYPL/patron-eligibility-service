@@ -1,8 +1,6 @@
 language: node_js
-node_js:
-- '6.10'
 install: npm install
-script: npm test
+script: LOG_LEVEL=error npm test
 cache:
   directories:
   - node_modules
@@ -11,8 +9,6 @@ before_deploy:
 after_success:
 - ENVIRONMENT_NAME=$TRAVIS_BRANCH
 - if [ "$TRAVIS_BRANCH" == "master" ]; then ENVIRONMENT_NAME=production; fi
-- if [ "$ENVIRONMENT_NAME" == "development" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_DEVELOPMENT;
-  AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_DEVELOPMENT; fi
 - if [ "$ENVIRONMENT_NAME" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
   fi
 - if [ "$ENVIRONMENT_NAME" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
@@ -24,13 +20,14 @@ deploy:
   script: "./scripts/travis-deploy.sh $ENVIRONMENT_NAME"
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    # Note: development deploys are disabled:
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 - provider: script
   script: ./node_modules/.bin/node-lambda package -e "$ENVIRONMENT_NAME"
   skip_cleanup: true
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 - provider: s3
   access_key_id: "${!AWS_KEY_VAR}"
   secret_access_key: "${!AWS_SECRET_VAR}"
@@ -39,10 +36,8 @@ deploy:
   local_dir: build
   on:
     all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^development|qa|production$"
+    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
 after_deploy: echo "Successfully executed deploy trigger for $ENVIRONMENT_NAME"
 env:
   global:
-  - secure: UCzOSDd97Sm5dBb+uQtnMyCJnzCzvuw+dhyeAzLtDwNT3uTQYhXakFurRRjpJsdY7BRWnhedZUen3fL5IuceBJuMX38ELkvW72AOu68gYpa/65nB0UxEzM0y+u3uf0BvrTl7zXWPZrxtgphQ7GyiVkvu+IyMJ5JzgFLIn6f49WAZ/KOHxZp7VeW0X9aLDeb/CtddcdYJk98fyQGHd3bdQ6viK7UQGRkpusQn8a9kB25kEmtXSzKFTQT1M81WxthMke+o51z86hqZdMSPeIvyN6NlBeJIB8Mb1k1YzDZq6z04sBlFkl/hmi13FuLqlAFYLqc1HVSq3wv6dlqiV9TPTBiwFjmuQRFIY7JBPISGCMeYPhO3Fc2RdYZpAE8M71QVbc+tBMfLuN/bfrqrxTMYZrd+xYhsPWsOCS+em4cobcPIm+uwGP5kXONgsmL1BBrLcBkYeCmZXDgT4utXIKtc0s696U/R8ahpg7CN/zgSIy/ed5BrecxWv7FnFyDdYQQBIFDIv7FAqYpiw58SskBYkh+OTYsQc3fePkDl1sybCiG59aH7iETUxTNCP9T9iUZAqoni/3D5NHhwKBajg2m3QnqC9vPxIlAcl8wlmykilYeHQ3rkNt5OmtVdqj2j+3afg+wohjZegggqvtottb7HoypczSJlTW7TaLVq3+Cy+m8=
-  - secure: wWJVagOnnRVM5L17kyc2H31TMUMFo+WHiKbnKsYiLwnaanBKg9+tNQXcaXNgcreV4HORS63wNHTEEOVg90eVIVKm4oc1hxL9PYIYgXTmEzRsiK8EVMSzq1XHV4w+GtsozjwZGJ8/C6h/+vV+0QHxj66VqRSTyuI7ydZ18tY3VTfS3OMZLM/QHVpwC4rDrZw51+7gUvAuTy5iV1MjNO3oZa829nVTLdZQYiUKn7+spYLtblsBETFcsuy6XtwSp4N60NyopHTtuHME0472Vmb561lw6o93C3HrLV0lmL4w3kfQyBgcLJNBrbElCYS6TN9LKshax3saC3MWKCdQNXSJM5yRLtb4FwXJZGjZrpHkcu01qS/ZOz9L8KZXBcygAdgLBx68FkxWIfb0OciP1fyY+p7RQ6HQwOAyzVGPQ/Xz17VLclKZ5To1y2+utBbFK7MbfeVqEpGFNkIaeb9EQlUZJ8FasR/uy2S/vdj8hJQWdB9zSp+eur5TjRv6yAhHJ1GjCWfGKp4maZVC+3AzPzo3NG54fiqwC80pSAK59WvZhoGeyGNhoAhkFZbLgejg+nVihbiVIp4MnyDt+wD6JCcBpFtv7mpuLSptXjqCZWp0Q4kVZB9JPgAmXTZ6f8HB0WLJmj+Sc/244Jgcbg8tuCm1epsT4pR0JpYI5a/kQhT2rd0=
-  - secure: gOvzAo/GPXyaxhAm46NegXjHOYrFmKXBJGm+KpbnZ4EsEJX3T4fmlObdIgPGbTtvDCS8r7uoCvz3eekjx+A/M22JMsPOPn3aaU5ii01ozvJyD02uLggPlqXHa7w0L8mcL+BmY3hYM2h0Lv7v6NZFiKZAy7sfAzS0pMRdnV9e2aTi1PgYDGURMM3f54cLre8HTGNsoC0Z2Z55vDg2e72z4K4u2ncmdvqJaRxFftfVL/e1FUMzoUeWRqpep4xhw3KJ05gzMTi4SoCsYXQH+33Ak3u/91Ex6FmOXdH9euPvoOO1QWwweQsgWb7bV/hS4L3EOrBkg0SDRg+g2qjt5GH60IJ76kXFHCadHWOyc7CLWZ8KnmEOKQmAw7JZtBaS44P38h9uUIy3Wrv0C0zKyH8Pgj5rJ/TxtB5qma8tT4GYVdVnGmphq5FNNiLJGKMfqJqWWB5Olx9VUmZBSvwo2r8S+PZbCQa4v7EDlpG0dDYmzfTNsuu0zbCQqSY3xYi7ADeZCFwsaO11t7iiMIYJKsrp6MfhpKtnu70Pfz017pVe2Wt9gl+FTM/rgPh1ZR7T+iAk/nGr/jrRTzsm3IBLkRpWQl44mU3TBH9HxVR7/hAyW5Lt2JNkKVTep67NOMLmbC/6XcVPXv3BMw2sKcAyBXS15xGlzrmF0HdefIeDZSaPFeo=
+    secure: lzeWEulqWP6wC4VFXIsCfaljL3wIzVwveLdGC69scI55U5EMyuiD54aTCLFIz9ESyBauMsFHhNkuK0TAF+1j3RUJgxAtzoKCSvCOLWeJLZBlP8ynYZW4YC27oP9iQUAB1QmSmFXvDosbs1c0IHK2W3oDu2gNeUyjGq5yXM7I0hr+AdnmMUPcYBQ6u4KSDESKPD0ZyeWXCG1vNbOZMLa9p1Dcjy5UwMsytNbdjfHqspeZG1dkm5WRKoBoHR9q1LDoNznaJg26qLg98iBZsE1k9WlgOd5a8LZB3KnPr4uAxhyToDagpEeQ1/tolEpvsSIHoBUuwVOPQwbecmO7ZH+KrLCvITxHJaJ3qP9AvfhJz0I9IjTPZtp1t6HEapH4APnX//b4J4+W3BbG5HHmJdvdPmtfYAWVDTrZuO4tSHfWqVmuzZ4RRKGKQHEoiP0aSWsg6jf7gAI5QqqVqKqcyV9KKN1FreAV4VK0U5Z6t6nS05PEmMLTNLWISjwmtkNswFxGut3ZTiUJoy69o81hUQRP3q6dKq5d0M7EQmNf8rjJIvfkGnNNQI7BG8yuzsD3mPQ++O+kK1osOPV4+4B24Ko0h0RWtJK8dp01U6u5BEXVfMYHS+CQXKrx3C6MxBXGpr4t41g1Z/+Z55PUE9Rd73KhhEbJh4lHoaLgu1q+HxARsLM=

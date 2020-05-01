@@ -1,16 +1,31 @@
-const LambdaTester = require('lambda-tester')
 const sinon = require('sinon')
-const kmsHelper = require('../lib/kms-helper')
-const handler = require('../index').handler
 const wrapper = require('@nypl/sierra-wrapper')
 
-describe('Lambda index handler', function () {
-  before(function () {
-    sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
-      return Promise.resolve('fake decrypted secret')
+const kmsHelper = require('../lib/kms-helper')
+const checkEligibility = require('../checkEligibility')
+
+describe('checkEligibility', function () {
+  describe('ptypeDisallowsHolds', function () {
+    it('returns false for typical Researcher/scholar ptypes', function () {
+      // Ptype 10 (Adult 18-64 Metro (3 Year)) allows
+      expect(checkEligibility.ptypeDisallowsHolds(10)).to.equal(false)
+      // Ptype 89: Cullman scholar
+      expect(checkEligibility.ptypeDisallowsHolds(89)).to.equal(false)
     })
-    sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-      const goodResponse = {
+
+    it('returns true for Easy Borrowing ptypes', function () {
+      // Ptype 120: Easy Borrowing AdultPilot
+      expect(checkEligibility.ptypeDisallowsHolds(120)).to.equal(true)
+      // Ptype 121: Easy Borrowing SeniorPilot
+      expect(checkEligibility.ptypeDisallowsHolds(121)).to.equal(true)
+    })
+  })
+
+  describe('identifyPatronIssues', function () {
+    let patronInfo
+
+    beforeEach(() => {
+      patronInfo = {
         'data': {
           'total': 1,
           'entries': [
@@ -19,59 +34,160 @@ describe('Lambda index handler', function () {
               'expirationDate': '2022-04-01',
               'birthDate': '1996-11-22',
               'patronType': 10,
-              'patronCodes': {
-                'pcode1': '-',
-                'pcode2': 'p',
-                'pcode3': 2,
-                'pcode4': 0
-              },
-              'homeLibraryCode': 'lb',
-              'message': {
-                'code': '-',
-                'accountMessages': [
-                  'digitallionprojectteam@nypl.org'
-                ]
-              },
               'blockInfo': {
-                'code': 'c'
+                'code': '-'
               },
-              'moneyOwed': 115.92
+              'moneyOwed': 0
             }
           ]
-        },
-        'url': 'https://nypl-sierra-test.iii.com/iii/sierra-api/v3/patrons/5459252'
+        }
       }
+    })
 
-      return new Promise((resolve, reject) => {
-        resolve(cb(null, goodResponse))
-      })
+    it('identifies no issue if patron has no issues', function () {
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(false)
     })
-    sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => {
-      let body
-      if (path.includes('1001006')) {
-        body = { description: 'XCirc error : Bib record cannot be loaded' }
-      } else {
-        body = { description: 'blahblahblah' }
-      }
-      return new Promise((resolve, reject) => { resolve(cb(body, false)) })
+
+    it('identifies issue if ptype bars holds', function () {
+      patronInfo['data']['entries'][0]['patronType'] = 120
+
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).ptypeDisallowsHolds).to.eq(true)
     })
-    sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => {
-      return cb(null, null)
+
+    it('identifies issue if patron owes > $15', function () {
+      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
+
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).moneyOwed).to.eq(true)
+    })
+
+    it('identifies issue if patron has blocks', function () {
+      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
+
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).blocked).to.eq(true)
+    })
+
+    it('identifies issue if patron has expired card', function () {
+      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).expired).to.eq(true)
+    })
+
+    it('identifies all four possible issues if patron is the Snake Plissken of borrowing', function () {
+      patronInfo['data']['entries'][0]['patronType'] = 120
+      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
+      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
+      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+
+      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
+      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).ptypeDisallowsHolds).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).moneyOwed).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).blocked).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo).expired).to.eq(true)
     })
   })
 
-  it('PatronEligibility responds with \'eligible to place holds\' for an eligible patron', function () {
-    return LambdaTester(handler)
-      .event({ path: '/api/v0.1/patrons/1001006/hold-request-eligibility' })
-      .expectResult((result) => {
-        expect(result.body).to.equal('{\n  "eligibility": true\n}')
+  describe('checkEligibility', function () {
+    before(function () {
+      process.env.SIERRA_BASE = 'https://example.com'
+
+      sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
+        return Promise.resolve('fake decrypted secret')
       })
-  })
-  it('PatronEligibility responds with a string representation of an errors object for an ineligible patron', function () {
-    return LambdaTester(handler)
-      .event({ path: '/api/v0.1/patrons/5459252/hold-request-eligibility' })
-      .expectResult((result) => {
-        expect(result.body).to.equal('{\n  "eligibility": false,\n  "expired": false,\n  "blocked": true,\n  "moneyOwed": true\n}')
+
+      // Stub the test hold:
+      const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
+      sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => cb(bibCanNotBeLoadedResponse))
+
+      // Stub login:
+      sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => cb(null, null))
+    })
+
+    after(function () {
+      kmsHelper.decrypt.restore()
+      wrapper.apiPost.restore()
+      wrapper.promiseAuth.restore()
+    })
+
+    describe('eligible ptypes', function () {
+      before(function () {
+        // Stub the patron fetch:
+        sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
+          const goodResponse = {
+            'data': {
+              'entries': [
+                {
+                  'expirationDate': '2022-04-01',
+                  'patronType': 10,
+                  'blockInfo': { 'code': '-' },
+                  'moneyOwed': 0.0
+                }
+              ]
+            }
+          }
+
+          return new Promise((resolve, reject) => {
+            resolve(cb(null, goodResponse))
+          })
+        })
       })
+
+      after(function () {
+        wrapper.apiGet.restore()
+      })
+
+      it('considers ptype 10 eligible', function () {
+        return checkEligibility.checkEligibility(5459252)
+          .then((response) => {
+            expect(response).to.be.a('object')
+            expect(response.eligibility).to.eq(true)
+          })
+      })
+    })
+
+    describe('ineligible ptypes', function () {
+      before(function () {
+        // Stub the patron fetch:
+        sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
+          const goodResponse = {
+            'data': {
+              'entries': [
+                {
+                  'expirationDate': '2022-04-01',
+                  'patronType': 120,
+                  'blockInfo': { 'code': '-' },
+                  'moneyOwed': 0.0
+                }
+              ]
+            }
+          }
+
+          return new Promise((resolve, reject) => {
+            resolve(cb(null, goodResponse))
+          })
+        })
+      })
+
+      after(function () {
+        wrapper.apiGet.restore()
+      })
+
+      it('considers ptype 120 ineligible', function () {
+        return checkEligibility.checkEligibility(5459252)
+          .then((response) => {
+            expect(response).to.be.a('object')
+            expect(response.eligibility).to.eq(false)
+          })
+      })
+    })
   })
 })
