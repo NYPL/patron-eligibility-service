@@ -1,11 +1,15 @@
 const winston = require('winston')
 winston.emitErrs = false
 
-const logLevel = process.env.LOG_LEVEL || ((process.env.NODE_ENV === 'production') ? 'info' : 'debug')
+// Set logLevel to env.LOG_LEVEL - or to the level appropriate for NODE_ENV.
+// Otherwise to 'debug'
+const logLevel = process.env.LOG_LEVEL || {
+  'production': 'info',
+  'test': 'error'
+}[process.env.NODE_ENV] || 'debug'
 
 let loggerTransports = []
 
-// Spewing logs while running tests is annoying
 loggerTransports.push(new winston.transports.Console({
   level: logLevel,
   handleExceptions: true,

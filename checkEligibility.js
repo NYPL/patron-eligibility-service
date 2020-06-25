@@ -191,8 +191,11 @@ function checkEligibility (patronId) {
           return handlePatronIneligible()
         }
       }
+    }).then((result) => {
+      logger.info(`CheckEligibility result for patron ${patronId}: ${result.eligibility}`, result)
+      return result
     }).catch((e) => {
-      logger.error('CheckEligibility Encountered error: ', e)
+      logger.error(`CheckEligibility encountered error for patron ${patronId}: `, e)
       throw e
     })
 }
