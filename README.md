@@ -2,6 +2,24 @@
 
 This package is intended to be used as a Lambda-based Node.js service.
 
+## Purpose
+
+This app serves `GET /api/v0.1/patrons/:patronid/hold-request-eligibility`. The endpoint assesses whether or not the patron identified by `patronid` is eligible to place holds on research items. The response resembles:
+
+```
+{ "eligibility": true|false }
+```
+
+The following conditions make one *ineligible*:
+
+ - ptype bars holds (e.g. ptype 120)
+ - fines exceed $15
+ - patron record has blocks
+ - patron has expired card
+ - some other condition causes checkouts to fail (e.g. patron has maximum checkouts)
+
+If none of the above conditions are met, the patron will be considered *eligible*.
+
 ## Requirements
 
 * Node.js >= 6.10
