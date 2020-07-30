@@ -95,7 +95,11 @@ function ptypeDisallowsHolds (ptype) {
   const ptypeMapping = nyplCoreObjects('by-patron-type')
   if (!ptypeMapping) throw new Error('Could not load patron types')
 
-  if (!ptypeMapping[ptype]) throw new Error(`Could not find ptype '${ptype}' in ptype mapping`)
+  // If it's a newly added ptype not in nypl-core, assume it allows holds:
+  if (!ptypeMapping[ptype]) {
+    logger.debug(`Ptype not found: ${ptype}. Assuming that ptype allows holds.`)
+    return false
+  }
   const locationTypes = ptypeMapping[ptype].accessibleDeliveryLocationTypes
 
   return !locationTypes || (Array.isArray(locationTypes) && locationTypes.length === 0)
