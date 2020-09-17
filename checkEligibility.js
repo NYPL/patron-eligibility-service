@@ -65,7 +65,7 @@ function getPatronHoldsCount (patronId) {
     wrapper.apiGet(`patrons/${patronId}/holds`, (errorBibReq, results) => {
       if (errorBibReq) {
         logger.error('error getting patron holds count: ', errorBibReq)
-        reject(new ParameterError(`Could not get patron info for patron ${patronId}`))
+        reject(new ParameterError(`Could not get holds count for patron ${patronId}`))
       }
 
       logger.debug(`Fetched patron holds count for ${patronId}`)
