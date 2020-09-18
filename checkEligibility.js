@@ -58,6 +58,22 @@ function getPatronInfo (patronId) {
   })
 }
 
+function getPatronHoldsCount (patronId) {
+  logger.debug(`Fetching patron holds count for ${patronId}`)
+  // wrapper.apiGet does not always return a Promise, so just use callback interface:
+  return new Promise((resolve, reject) => {
+    wrapper.apiGet(`patrons/${patronId}/holds`, (errorBibReq, results) => {
+      if (errorBibReq) {
+        logger.error('error getting patron holds count: ', errorBibReq)
+        reject(new ParameterError(`Could not get holds count for patron ${patronId}`))
+      }
+
+      logger.debug(`Fetched patron holds count for ${patronId}`)
+      return resolve(results.data.entries[0].total)
+    })
+  })
+}
+
 /**
  *  Given an patron-info hash (i.e. one retrieved via patrons/{patronId}),
  *  returns a Hash with the following boolean properties:
@@ -66,13 +82,14 @@ function getPatronInfo (patronId) {
  *   - moneyOwed: True if card has > $15 fines
  *   - ptypeDisallowsHolds: True if patron ptype disallows holds (e.g. ptype 120, 121)
  */
-function identifyPatronIssues (info) {
+function identifyPatronIssues (info, holdsCount) {
   info = info.data.entries[0]
   const issues = {
     expired: new Date(info.expirationDate) < new Date(),
     blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
     moneyOwed: info.moneyOwed > 15, // may want to change this
-    ptypeDisallowsHolds: ptypeDisallowsHolds(info.patronType)
+    ptypeDisallowsHolds: ptypeDisallowsHolds(info.patronType),
+    reachedHoldLimit: holdsCount >= process.env.HOLDS_LIMIT
   }
 
   // Set a single property to check for consumers that don't care *what* issues
@@ -174,9 +191,10 @@ function checkEligibility (patronId) {
           patronInfo = _patronInfo
           // Determine whether/not ptype allowed to place holds:
           return patronPtypeAllowsHolds(patronInfo)
-        })
+        }),
+      getPatronHoldsCount(patronId)
     ])).then((checks) => {
-      const [canPlaceTestHold, ptypeAllowsHolds] = checks
+      const [canPlaceTestHold, ptypeAllowsHolds, holdsCount] = checks
       const eligible = canPlaceTestHold && ptypeAllowsHolds
 
       logger.debug(`Result of checks is ${canPlaceTestHold} && ${ptypeAllowsHolds}`)
@@ -184,7 +202,7 @@ function checkEligibility (patronId) {
       if (eligible) {
         return handleEligible()
       } else {
-        const issues = identifyPatronIssues(patronInfo)
+        const issues = identifyPatronIssues(patronInfo, holdsCount)
         if (issues.hasIssues) {
           return handlePatronIneligible(issues)
         } else {
@@ -203,5 +221,6 @@ function checkEligibility (patronId) {
 module.exports = {
   checkEligibility,
   ptypeDisallowsHolds,
-  identifyPatronIssues
+  identifyPatronIssues,
+  getPatronHoldsCount
 }
