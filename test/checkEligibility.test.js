@@ -1,3 +1,4 @@
+/* eslint-env mocha */
 const sinon = require('sinon')
 const wrapper = require('@nypl/sierra-wrapper')
 
@@ -42,6 +43,8 @@ describe('checkEligibility', function () {
           ]
         }
       }
+
+      process.env.HOLDS_LIMIT = 15
     })
 
     it('identifies no issue if patron has no issues', function () {
@@ -81,18 +84,26 @@ describe('checkEligibility', function () {
       expect(checkEligibility.identifyPatronIssues(patronInfo).expired).to.eq(true)
     })
 
+    it('identifies issue if patron has reached holds limit', function () {
+      expect(checkEligibility.identifyPatronIssues(patronInfo, 25).hasIssues).to.eq(true)
+      expect(checkEligibility.identifyPatronIssues(patronInfo, 25).reachedHoldLimit).to.eq(true)
+    })
+
     it('identifies all four possible issues if patron is the Snake Plissken of borrowing', function () {
       patronInfo['data']['entries'][0]['patronType'] = 120
       patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
       patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
       patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
 
-      expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
-      expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
-      expect(checkEligibility.identifyPatronIssues(patronInfo).ptypeDisallowsHolds).to.eq(true)
-      expect(checkEligibility.identifyPatronIssues(patronInfo).moneyOwed).to.eq(true)
-      expect(checkEligibility.identifyPatronIssues(patronInfo).blocked).to.eq(true)
-      expect(checkEligibility.identifyPatronIssues(patronInfo).expired).to.eq(true)
+      const issues = checkEligibility.identifyPatronIssues(patronInfo, 25)
+
+      expect(issues).to.be.a('object')
+      expect(issues.hasIssues).to.eq(true)
+      expect(issues.ptypeDisallowsHolds).to.eq(true)
+      expect(issues.moneyOwed).to.eq(true)
+      expect(issues.blocked).to.eq(true)
+      expect(issues.expired).to.eq(true)
+      expect(issues.reachedHoldLimit).to.eq(true)
     })
   })
 
@@ -188,6 +199,38 @@ describe('checkEligibility', function () {
             expect(response.eligibility).to.eq(false)
           })
       })
+    })
+  })
+
+  describe('getPatronHoldsCount', function () {
+    before(function () {
+      // Stub the patron fetch:
+      sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
+        const goodResponse = {
+          'data': {
+            'entries': [
+              {
+                'total': 10
+              }
+            ]
+          }
+        }
+
+        return new Promise((resolve, reject) => {
+          resolve(cb(null, goodResponse))
+        })
+      })
+    })
+
+    after(function () {
+      wrapper.apiGet.restore()
+    })
+
+    it('returns number of holds for the patron', function () {
+      return checkEligibility.getPatronHoldsCount(5459252)
+        .then((response) => {
+          expect(response).to.eq(10)
+        })
     })
   })
 })
