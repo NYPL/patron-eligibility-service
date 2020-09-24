@@ -1,3 +1,4 @@
+/* eslint-env mocha */
 const LambdaTester = require('lambda-tester')
 const sinon = require('sinon')
 const wrapper = require('@nypl/sierra-wrapper')
