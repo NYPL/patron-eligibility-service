@@ -1,10 +1,10 @@
-var wrapper = require('@nypl/sierra-wrapper')
+const wrapper = require('@nypl/sierra-wrapper')
 const nyplCoreObjects = require('@nypl/nypl-core-objects')
-var logger = require('./logger')
+const logger = require('./logger')
 const kms = require('./lib/kms-helper')
 const { SierraError, ParameterError } = require('./lib/errors')
 
-function patronCanPlaceTestHold (patronId) {
+function patronCanPlaceTestHold (patronId, attempt = 1) {
   logger.debug('Performing patronCanPlaceTestHold')
   const body = {
     json: true,
@@ -36,6 +36,22 @@ function patronCanPlaceTestHold (patronId) {
       }
     })
   })
+    .catch((e) => {
+      return new Promise((resolve, reject) => {
+        // After third failure, error hard
+        if (attempt === 3) return reject(new Error(`Exhausted retry attempts placing test hold for patron ${patronId}. Encountered error: "${e}"`))
+
+        logger.info(`Encountered error placing test hold for patron ${patronId}. Initiating attempt ${attempt + 1}.`)
+
+        // Delay trying again, with exponential backoff (i.e. 1s, 4s, ...):
+        const delay = Math.pow(attempt, 2) * 1000
+        setTimeout(() => {
+          patronCanPlaceTestHold(patronId, attempt + 1)
+            .then(resolve)
+            .catch(reject)
+        }, delay)
+      })
+    })
 }
 
 function handleEligible () {

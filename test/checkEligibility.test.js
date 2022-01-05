@@ -4,8 +4,27 @@ const wrapper = require('@nypl/sierra-wrapper')
 
 const kmsHelper = require('../lib/kms-helper')
 const checkEligibility = require('../checkEligibility')
+const logger = require('../logger')
+
+const tomorrow = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+const eligiblePatron = Object.assign(
+  {},
+  require('../test/fixtures/eligible-patron.json'),
+  // Set expirationDate to tomorrow:
+  { expirationDate: tomorrow.toISOString().split('T').shift() }
+)
 
 describe('checkEligibility', function () {
+  before(() => {
+    sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
+      return Promise.resolve('fake decrypted secret')
+    })
+  })
+
+  after(() => {
+    kmsHelper.decrypt.restore()
+  })
+
   describe('ptypeDisallowsHolds', function () {
     it('returns false for typical Researcher/scholar ptypes', function () {
       // Ptype 10 (Adult 18-64 Metro (3 Year)) allows
@@ -26,23 +45,12 @@ describe('checkEligibility', function () {
     let patronInfo
 
     beforeEach(() => {
-      patronInfo = {
+      patronInfo = JSON.parse(JSON.stringify({
         'data': {
           'total': 1,
-          'entries': [
-            {
-              'id': 5459252,
-              'expirationDate': '2022-04-01',
-              'birthDate': '1996-11-22',
-              'patronType': 10,
-              'blockInfo': {
-                'code': '-'
-              },
-              'moneyOwed': 0
-            }
-          ]
+          'entries': [ eligiblePatron ]
         }
-      }
+      }))
 
       process.env.HOLDS_LIMIT = 15
     })
@@ -109,12 +117,6 @@ describe('checkEligibility', function () {
 
   describe('checkEligibility', function () {
     before(function () {
-      process.env.SIERRA_BASE = 'https://example.com'
-
-      sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
-        return Promise.resolve('fake decrypted secret')
-      })
-
       // Stub the test hold:
       const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
       sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => cb(bibCanNotBeLoadedResponse))
@@ -124,7 +126,6 @@ describe('checkEligibility', function () {
     })
 
     after(function () {
-      kmsHelper.decrypt.restore()
       wrapper.apiPost.restore()
       wrapper.promiseAuth.restore()
     })
@@ -199,6 +200,78 @@ describe('checkEligibility', function () {
             expect(response.eligibility).to.eq(false)
           })
       })
+    })
+  })
+
+  describe('checkEligibility sierra connection errors', function () {
+    let patronId = 5459252
+    let numberOfSimulatedNetworkFailures = null
+
+    let loggerErrorSpy = null
+
+    this.timeout(10000)
+
+    beforeEach(function () {
+      // Stub the wrapper.apiPost to throw an error:
+      let tries = 0
+      sinon.stub(wrapper, 'apiPost').callsFake((path, body, cb) => {
+        // Simulate an error thrown within the wrapper (e.g. network timeout)
+        // the first N times.
+        tries += 1
+        if (tries <= numberOfSimulatedNetworkFailures) throw new Error("Cannot read property 'statusCode' of undefined")
+
+        // Stub the test hold:
+        const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
+        cb(bibCanNotBeLoadedResponse)
+      })
+
+      loggerErrorSpy = sinon.spy(logger, 'error')
+    })
+
+    afterEach(() => {
+      wrapper.apiPost.restore()
+      logger.error.restore()
+    })
+
+    before(() => {
+      // Stub login:
+      sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => cb(null, null))
+
+      // Stub the other two data calls
+      const apiGet = sinon.stub(wrapper, 'apiGet')
+      apiGet.withArgs(`patrons/${patronId}`)
+        .callsFake((path, cb) => cb(null, { data: { total: 1, entries: [ eligiblePatron ] } }))
+      apiGet.withArgs(`patrons/${patronId}/holds`)
+        .callsFake((path, cb) => cb(null, { data: { entries: [ { total: 10 } ] } }))
+    })
+
+    after(function () {
+      wrapper.apiGet.restore()
+      wrapper.promiseAuth.restore()
+    })
+
+    it('retries sierra connection three times', () => {
+      numberOfSimulatedNetworkFailures = 2
+
+      return checkEligibility.checkEligibility(patronId)
+        .then((response) => {
+          expect(response).to.be.a('object')
+          expect(response.eligibility).to.eq(true)
+
+          // Expect no error logs:
+          expect(loggerErrorSpy.callCount).to.eq(0)
+        })
+    })
+
+    it('logs error if sierra connection fails after third time', () => {
+      numberOfSimulatedNetworkFailures = 3
+
+      return expect(checkEligibility.checkEligibility(patronId))
+        .to.be.rejectedWith(Error, `Exhausted retry attempts placing test hold for patron ${patronId}`)
+        .then(() => {
+          // Expect one error log:
+          expect(loggerErrorSpy.callCount).to.eq(1)
+        })
     })
   })
 
