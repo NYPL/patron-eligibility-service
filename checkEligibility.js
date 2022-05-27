@@ -68,7 +68,7 @@ function handleEligible () {
   return { eligibility: true }
 }
 
-function getPatronInfo (patronId) {
+async function getPatronInfo (patronId) {
   logger.debug(`Fetching patron info for ${patronId}`)
   // wrapper.apiGet does not always return a Promise, so just use callback interface:
   try {
@@ -92,7 +92,7 @@ function getPatronInfo (patronId) {
   // })
 }
 
-function getPatronHoldsCount (patronId) {
+async function getPatronHoldsCount (patronId) {
   logger.debug(`Fetching patron holds count for ${patronId}`)
   try {
     const response = await wrapper.get(`patrons/${patronId}/holds`)
@@ -186,22 +186,18 @@ function config () {
     setConfigValue(config, 'SIERRA_KEY', 'key'),
     setConfigValue(config, 'SIERRA_SECRET', 'secret')
   ])
-    .then(values => wrapper.loadConfig(config))
+    .then(values => wrapper.config(config))
 }
 
-function sierraLogin () {
+async function sierraLogin () {
   logger.debug('Performing Sierra login')
-  // wrapper.promiseAuth does not consistently return a Promise. Let's just use the callback interface
-  return new Promise((resolve, reject) => {
-    wrapper.promiseAuth((error, results) => {
-      if (error) {
-        logger.error('Error logging into Sierra: ' + error)
-        return reject(new SierraError(error))
-      }
-      logger.debug('Sierra login successful')
-      return resolve()
-    })
-  })
+  try {
+    await wrapper.authenticate()
+    logger.debug('Sierra login successful')
+  } catch (e) {
+    logger.error('Error logging into Sierra: ' + e)
+    throw new SierraError(e)
+  }
 }
 
 /**
@@ -220,7 +216,6 @@ function sierraLogin () {
  */
 function checkEligibility (patronId) {
   let patronInfo = null
-
   return config()
     .then(sierraLogin)
     .then(() => Promise.all([
