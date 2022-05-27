@@ -13,8 +13,8 @@ describe('Lambda index handler', function () {
     sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
       return Promise.resolve('fake decrypted secret')
     })
-    sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-      const goodResponse = {
+    sinon.stub(wrapper, 'get').callsFake(() => {
+      return {
         'data': {
           'total': 1,
           'entries': [
@@ -45,30 +45,24 @@ describe('Lambda index handler', function () {
         },
         'url': 'https://nypl-sierra-test.iii.com/iii/sierra-api/v3/patrons/5459252'
       }
-
-      return new Promise((resolve, reject) => {
-        resolve(cb(null, goodResponse))
-      })
     })
-    sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => {
+    sinon.stub(wrapper, 'post').callsFake((path, data) => {
       let body
       if (path.includes('1001006')) {
         body = { description: 'XCirc error : Bib record cannot be loaded' }
       } else {
         body = { description: 'blahblahblah' }
       }
-      return new Promise((resolve, reject) => { resolve(cb(body, false)) })
+      return body
     })
-    sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => {
-      return cb(null, null)
-    })
+    sinon.stub(wrapper, 'authenticate')
   })
 
   after(function () {
     kmsHelper.decrypt.restore()
-    wrapper.apiPost.restore()
-    wrapper.apiGet.restore()
-    wrapper.promiseAuth.restore()
+    wrapper.post.restore()
+    wrapper.get.restore()
+    wrapper.authenticate.restore()
   })
 
   it('PatronEligibility responds with \'eligible to place holds\' for an eligible patron', function () {
