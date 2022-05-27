@@ -48,7 +48,7 @@ describe('checkEligibility', function () {
       patronInfo = JSON.parse(JSON.stringify({
         'data': {
           'total': 1,
-          'entries': [ eligiblePatron ]
+          'entries': [eligiblePatron]
         }
       }))
 
@@ -119,45 +119,39 @@ describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
       const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
-      sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => cb(bibCanNotBeLoadedResponse))
+      sinon.stub(wrapper, 'post').callsFake(() => bibCanNotBeLoadedResponse)
 
       // Stub login:
-      sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => cb(null, null))
+      sinon.stub(wrapper, 'authenticate')
     })
 
     after(function () {
-      wrapper.apiPost.restore()
-      wrapper.promiseAuth.restore()
+      wrapper.post.restore()
+      wrapper.authenticate.restore()
     })
 
     describe('eligible ptypes', function () {
       before(function () {
         // Stub the patron fetch:
-        sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-          const goodResponse = {
-            'data': {
-              'entries': [
-                {
-                  'expirationDate': '2022-04-01',
-                  'patronType': 10,
-                  'blockInfo': { 'code': '-' },
-                  'moneyOwed': 0.0
-                }
-              ]
-            }
+        sinon.stub(wrapper, 'get').callsFake(() => ({
+          'data': {
+            'entries': [
+              {
+                'expirationDate': '2022-04-01',
+                'patronType': 10,
+                'blockInfo': { 'code': '-' },
+                'moneyOwed': 0.0
+              }
+            ]
           }
-
-          return new Promise((resolve, reject) => {
-            resolve(cb(null, goodResponse))
-          })
-        })
+        }))
       })
 
       after(function () {
-        wrapper.apiGet.restore()
+        wrapper.get.restore()
       })
 
-      it('considers ptype 10 eligible', function () {
+      it.only('considers ptype 10 eligible', function () {
         return checkEligibility.checkEligibility(5459252)
           .then((response) => {
             expect(response).to.be.a('object')
@@ -240,9 +234,9 @@ describe('checkEligibility', function () {
       // Stub the other two data calls
       const apiGet = sinon.stub(wrapper, 'apiGet')
       apiGet.withArgs(`patrons/${patronId}`)
-        .callsFake((path, cb) => cb(null, { data: { total: 1, entries: [ eligiblePatron ] } }))
+        .callsFake((path, cb) => cb(null, { data: { total: 1, entries: [eligiblePatron] } }))
       apiGet.withArgs(`patrons/${patronId}/holds`)
-        .callsFake((path, cb) => cb(null, { data: { entries: [ { total: 10 } ] } }))
+        .callsFake((path, cb) => cb(null, { data: { entries: [{ total: 10 }] } }))
     })
 
     after(function () {
