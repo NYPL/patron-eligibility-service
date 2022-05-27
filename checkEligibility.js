@@ -4,7 +4,7 @@ const logger = require('./logger')
 const kms = require('./lib/kms-helper')
 const { SierraError, ParameterError } = require('./lib/errors')
 
-function patronCanPlaceTestHold (patronId, attempt = 1) {
+async function patronCanPlaceTestHold (patronId, attempt = 1) {
   logger.debug('Performing patronCanPlaceTestHold')
   const body = {
     json: true,
@@ -18,40 +18,50 @@ function patronCanPlaceTestHold (patronId, attempt = 1) {
   // wrapper.apiPost accepts a callback but sometimes (only on success) returns
   // a Promise. Because the callback is fired in all cases, we'll just use the
   // callback interface:
-  return new Promise((resolve, reject) => {
-    wrapper.apiPost(`patrons/${patronId}/holds/requests`, body, (errorBibReq, results) => {
-      if (errorBibReq) {
-        // If the specific error is the following, the patron's account *can*
-        // place holds
-        const patronHoldsPossible = errorBibReq.description === 'XCirc error : Bib record cannot be loaded'
+  try {
+    await wrapper.post(`patrons/${patronId}/holds/requests`, body)
+    logger.error('Error: Placing a test hold on a test item did not generate an error!')
+    return false
+  } catch (e) {
+    const patronHoldsPossible = e.description === 'XCirc error : Bib record cannot be loaded'
 
-        logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', errorBibReq)
-        resolve(patronHoldsPossible)
-      } else {
-        // If no error was returned when placing a hold for the above
-        // completely made-up item, either a record with that id was
-        // created (!) or there are other issues..
-        logger.error('Error: Placing a test hold on a test item did not generate an error!')
-        resolve(false)
-      }
-    })
-  })
-    .catch((e) => {
-      return new Promise((resolve, reject) => {
-        // After third failure, error hard
-        if (attempt === 3) return reject(new Error(`Exhausted retry attempts placing test hold for patron ${patronId}. Encountered error: "${e}"`))
+    logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', e)
+    return patronHoldsPossible
+  }
+  // return new Promise((resolve, reject) => {
+  //   wrapper.apiPost(`patrons/${patronId}/holds/requests`, body, (errorBibReq, results) => {
+  //     if (errorBibReq) {
+  //       // If the specific error is the following, the patron's account *can*
+  //       // place holds
+  //       const patronHoldsPossible = errorBibReq.description === 'XCirc error : Bib record cannot be loaded'
 
-        logger.info(`Encountered error placing test hold for patron ${patronId}. Initiating attempt ${attempt + 1}.`)
+  //       logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', errorBibReq)
+  //       resolve(patronHoldsPossible)
+  //     } else {
+  //       // If no error was returned when placing a hold for the above
+  //       // completely made-up item, either a record with that id was
+  //       // created (!) or there are other issues..
+  //       logger.error('Error: Placing a test hold on a test item did not generate an error!')
+  //       resolve(false)
+  //     }
+  //   })
+  // })
+  //   .catch((e) => {
+  //     return new Promise((resolve, reject) => {
+  //       // After third failure, error hard
+  //       if (attempt === 3) return reject(new Error(`Exhausted retry attempts placing test hold for patron ${patronId}. Encountered error: "${e}"`))
 
-        // Delay trying again, with exponential backoff (i.e. 1s, 4s, ...):
-        const delay = Math.pow(attempt, 2) * 1000
-        setTimeout(() => {
-          patronCanPlaceTestHold(patronId, attempt + 1)
-            .then(resolve)
-            .catch(reject)
-        }, delay)
-      })
-    })
+  //       logger.info(`Encountered error placing test hold for patron ${patronId}. Initiating attempt ${attempt + 1}.`)
+
+  //       // Delay trying again, with exponential backoff (i.e. 1s, 4s, ...):
+  //       const delay = Math.pow(attempt, 2) * 1000
+  //       setTimeout(() => {
+  //         patronCanPlaceTestHold(patronId, attempt + 1)
+  //           .then(resolve)
+  //           .catch(reject)
+  //       }, delay)
+  //     })
+  //   })
 }
 
 function handleEligible () {
@@ -61,33 +71,49 @@ function handleEligible () {
 function getPatronInfo (patronId) {
   logger.debug(`Fetching patron info for ${patronId}`)
   // wrapper.apiGet does not always return a Promise, so just use callback interface:
-  return new Promise((resolve, reject) => {
-    wrapper.apiGet(`patrons/${patronId}`, (errorBibReq, results) => {
-      if (errorBibReq) {
-        logger.error('error getting patron info: ', errorBibReq)
-        reject(new ParameterError(`Could not get patron info for patron ${patronId}`))
-      }
+  try {
+    const response = await wrapper.get(`patrons/${patronId}`)
+    logger.debug(`Fetched patron info for ${patronId}`)
+    return response
+  } catch (e) {
+    logger.error('error getting patron info: ', errorBibReq)
+    reject(new ParameterError(`Could not get patron info for patron ${patronId}`))
+  }
+  // return new Promise((resolve, reject) => {
+  //   wrapper.apiGet(`patrons/${patronId}`, (errorBibReq, results) => {
+  //     if (errorBibReq) {
+  //       logger.error('error getting patron info: ', errorBibReq)
+  //       reject(new ParameterError(`Could not get patron info for patron ${patronId}`))
+  //     }
 
-      logger.debug(`Fetched patron info for ${patronId}`)
-      return resolve(results)
-    })
-  })
+  //     logger.debug(`Fetched patron info for ${patronId}`)
+  //     return resolve(results)
+  //   })
+  // })
 }
 
 function getPatronHoldsCount (patronId) {
   logger.debug(`Fetching patron holds count for ${patronId}`)
-  // wrapper.apiGet does not always return a Promise, so just use callback interface:
-  return new Promise((resolve, reject) => {
-    wrapper.apiGet(`patrons/${patronId}/holds`, (errorBibReq, results) => {
-      if (errorBibReq) {
-        logger.error('error getting patron holds count: ', errorBibReq)
-        reject(new ParameterError(`Could not get holds count for patron ${patronId}`))
-      }
+  try {
+    const response = await wrapper.get(`patrons/${patronId}/holds`)
+    logger.debug(`Fetched patron holds count for ${patronId}`)
+    return response.data.entries[0].total
+  } catch (e) {
+    logger.error('error getting patron holds count: ', errorBibReq)
+    // not sure how to incorporate this:
+    // new ParameterError(`Could not get holds count for patron ${patronId}`)
+  }
+  // return new Promise((resolve, reject) => {
+  //   wrapper.apiGet(`patrons/${patronId}/holds`, (errorBibReq, results) => {
+  //     if (errorBibReq) {
+  //       logger.error('error getting patron holds count: ', errorBibReq)
+  //       reject(new ParameterError(`Could not get holds count for patron ${patronId}`))
+  //     }
 
-      logger.debug(`Fetched patron holds count for ${patronId}`)
-      return resolve(results.data.entries[0].total)
-    })
-  })
+  //     logger.debug(`Fetched patron holds count for ${patronId}`)
+  //     return resolve(results.data.entries[0].total)
+  //   })
+  // })
 }
 
 /**
@@ -155,7 +181,7 @@ function setConfigValue (config, envVariable, key) {
 }
 
 function config () {
-  const config = {'base': process.env.SIERRA_BASE}
+  const config = { 'base': process.env.SIERRA_BASE }
   return Promise.all([
     setConfigValue(config, 'SIERRA_KEY', 'key'),
     setConfigValue(config, 'SIERRA_SECRET', 'secret')
