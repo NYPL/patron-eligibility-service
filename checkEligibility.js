@@ -19,14 +19,16 @@ async function patronCanPlaceTestHold (patronId, attempt = 1) {
   // a Promise. Because the callback is fired in all cases, we'll just use the
   // callback interface:
   try {
-    await wrapper.post(`patrons/${patronId}/holds/requests`, body)
-    logger.error('Error: Placing a test hold on a test item did not generate an error!')
-    return false
-  } catch (e) {
-    const patronHoldsPossible = e.description === 'XCirc error : Bib record cannot be loaded'
+    const response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
+    const patronHoldsPossible = response.description === 'XCirc error : Bib record cannot be loaded'
 
-    logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', e)
+    logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', response)
+
+    if (!patronHoldsPossible) logger.error('Error: Placing a test hold on a test item did not generate an error!')
+
     return patronHoldsPossible
+  } catch (e) {
+    logger.error(e)
   }
 }
 
