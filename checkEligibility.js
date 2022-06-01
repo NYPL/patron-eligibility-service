@@ -7,28 +7,25 @@ const { SierraError, ParameterError } = require('./lib/errors')
 async function patronCanPlaceTestHold (patronId, attempt = 1) {
   logger.debug('Performing patronCanPlaceTestHold')
   const body = {
-    json: true,
-    method: 'POST',
-    body: {
-      recordType: 'i',
-      recordNumber: 10000000,
-      pickupLocation: 'maii2'
-    }
+    recordType: 'i',
+    recordNumber: 10000000,
+    pickupLocation: 'maii2'
   }
-  // wrapper.apiPost accepts a callback but sometimes (only on success) returns
-  // a Promise. Because the callback is fired in all cases, we'll just use the
-  // callback interface:
+  // This try/catch block logic is inverted. The success case of this request results in an error, and the failure case results in a typical response.
+  let patronHoldsPossible
+  let response
   try {
-    const response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
-    const patronHoldsPossible = response.description === 'XCirc error : Bib record cannot be loaded'
-
-    logger.debug('Finished performing patronCanPlaceTestHold with ' + (patronHoldsPossible ? 'favorable' : 'unfavorable') + ' response', response)
-
-    if (!patronHoldsPossible) logger.error('Error: Placing a test hold on a test item did not generate an error!')
-
-    return patronHoldsPossible
+    response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
+    logger.error('Error: Placing a test hold on a test item did not generate an error!')
+    return false
   } catch (e) {
-    logger.error(e)
+    patronHoldsPossible = e.response.data.description === 'XCirc error : There is a problem with your library record.  Please see a librarian.'
+    if (patronHoldsPossible) {
+      response = e.response.data
+      return true
+    } else logger.error(e)
+  } finally {
+    logger.debug(`Finished performing patronCanPlaceTestHold with ${patronHoldsPossible ? 'favorable' : 'unfavorable'} response`, response)
   }
 }
 
@@ -54,7 +51,7 @@ async function getPatronHoldsCount (patronId) {
   try {
     const response = await wrapper.get(`patrons/${patronId}/holds`)
     logger.debug(`Fetched patron holds count for ${patronId}`)
-    return response.data.entries[0].total
+    return response.total
   } catch (e) {
     logger.error('error getting patron holds count: ', e)
   }
@@ -69,7 +66,6 @@ async function getPatronHoldsCount (patronId) {
  *   - ptypeDisallowsHolds: True if patron ptype disallows holds (e.g. ptype 120, 121)
  */
 function identifyPatronIssues (info, holdsCount) {
-  info = info.data.entries[0]
   const issues = {
     expired: new Date(info.expirationDate) < new Date(),
     blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
