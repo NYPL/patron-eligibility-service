@@ -44,12 +44,7 @@ describe('checkEligibility', function () {
     let patronInfo
 
     beforeEach(() => {
-      patronInfo = JSON.parse(JSON.stringify({
-        'data': {
-          'total': 1,
-          'entries': [eligiblePatron]
-        }
-      }))
+      patronInfo = JSON.parse(JSON.stringify(eligiblePatron))
 
       process.env.HOLDS_LIMIT = 15
     })
@@ -60,7 +55,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if ptype bars holds', function () {
-      patronInfo['data']['entries'][0]['patronType'] = 120
+      patronInfo['patronType'] = 120
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -68,7 +63,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron owes > $15', function () {
-      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
+      patronInfo['moneyOwed'] = 115.0
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -76,7 +71,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has blocks', function () {
-      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
+      patronInfo['blockInfo']['code'] = 'c'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -84,7 +79,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has expired card', function () {
-      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+      patronInfo['expirationDate'] = '2019-11-25'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -97,10 +92,10 @@ describe('checkEligibility', function () {
     })
 
     it('identifies all four possible issues if patron is the Snake Plissken of borrowing', function () {
-      patronInfo['data']['entries'][0]['patronType'] = 120
-      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
-      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
-      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+      patronInfo['patronType'] = 120
+      patronInfo['moneyOwed'] = 115.0
+      patronInfo['blockInfo']['code'] = 'c'
+      patronInfo['expirationDate'] = '2019-11-25'
 
       const issues = checkEligibility.identifyPatronIssues(patronInfo, 25)
 
@@ -117,8 +112,8 @@ describe('checkEligibility', function () {
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
-      const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
-      sinon.stub(wrapper, 'post').callsFake(() => bibCanNotBeLoadedResponse)
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : There is a problem with your library record.  Please see a librarian.' } } }
+      sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
 
       // Stub login:
       sinon.stub(wrapper, 'authenticate')
@@ -133,16 +128,10 @@ describe('checkEligibility', function () {
       before(function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => ({
-          'data': {
-            'entries': [
-              {
-                'expirationDate': '2022-04-01',
-                'patronType': 10,
-                'blockInfo': { 'code': '-' },
-                'moneyOwed': 0.0
-              }
-            ]
-          }
+          'expirationDate': '2022-04-01',
+          'patronType': 10,
+          'blockInfo': { 'code': '-' },
+          'moneyOwed': 0.0
         }))
       })
 
@@ -164,16 +153,10 @@ describe('checkEligibility', function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => {
           return {
-            'data': {
-              'entries': [
-                {
-                  'expirationDate': '2022-04-01',
-                  'patronType': 120,
-                  'blockInfo': { 'code': '-' },
-                  'moneyOwed': 0.0
-                }
-              ]
-            }
+            'expirationDate': '2022-04-01',
+            'patronType': 120,
+            'blockInfo': { 'code': '-' },
+            'moneyOwed': 0.0
           }
         })
       })
@@ -192,92 +175,12 @@ describe('checkEligibility', function () {
     })
   })
 
-  // describe('checkEligibility sierra connection errors', function () {
-  //   let patronId = 5459252
-  //   let numberOfSimulatedNetworkFailures = null
-
-  //   let loggerErrorSpy = null
-
-  //   this.timeout(10000)
-
-  //   beforeEach(function () {
-  //     // Stub the wrapper.apiPost to throw an error:
-  //     let tries = 0
-  //     sinon.stub(wrapper, 'post').callsFake((path, body, cb) => {
-  //       // Simulate an error thrown within the wrapper (e.g. network timeout)
-  //       // the first N times.
-  //       tries += 1
-  //       if (tries <= numberOfSimulatedNetworkFailures) throw new Error("Cannot read property 'statusCode' of undefined")
-
-  //       // Stub the test hold:
-  //       const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
-  //       cb(bibCanNotBeLoadedResponse)
-  //     })
-
-  //     loggerErrorSpy = sinon.spy(logger, 'error')
-  //   })
-
-  //   afterEach(() => {
-  //     wrapper.apiPost.restore()
-  //     logger.error.restore()
-  //   })
-
-  //   before(() => {
-  //     // Stub login:
-  //     sinon.stub(wrapper, 'authenticate')
-
-  //     // Stub the other two data calls
-  //     const get = sinon.stub(wrapper, 'get')
-  //     get.withArgs(`patrons/${patronId}`)
-  //       .callsFake(() => ({ data: { total: 1, entries: [eligiblePatron] } }))
-  //     get.withArgs(`patrons/${patronId}/holds`)
-  //       .callsFake(() => ({ data: { entries: [{ total: 10 }] } }))
-  //   })
-
-  //   after(function () {
-  //     wrapper.get.restore()
-  //     wrapper.authenticate.restore()
-  //   })
-
-  //   it('retries sierra connection three times', () => {
-  //     numberOfSimulatedNetworkFailures = 2
-
-  //     return checkEligibility.checkEligibility(patronId)
-  //       .then((response) => {
-  //         expect(response).to.be.a('object')
-  //         expect(response.eligibility).to.eq(true)
-
-  //         // Expect no error logs:
-  //         expect(loggerErrorSpy.callCount).to.eq(0)
-  //       })
-  //   })
-
-  //   it('logs error if sierra connection fails after third time', () => {
-  //     numberOfSimulatedNetworkFailures = 3
-
-  //     return expect(checkEligibility.checkEligibility(patronId))
-  //       .to.be.rejectedWith(Error, `Exhausted retry attempts placing test hold for patron ${patronId}`)
-  //       .then(() => {
-  //         // Expect one error log:
-  //         expect(loggerErrorSpy.callCount).to.eq(1)
-  //       })
-  //   })
-  // })
-
   describe('getPatronHoldsCount', function () {
     before(function () {
       // Stub the patron fetch:
-      sinon.stub(wrapper, 'get').callsFake(() => {
-        return {
-          'data': {
-            'entries': [
-              {
-                'total': 10
-              }
-            ]
-          }
-        }
-      })
+      sinon.stub(wrapper, 'get').callsFake(() => ({
+        'total': 10
+      }))
     })
 
     after(function () {
