@@ -40,7 +40,7 @@ describe('Lambda index handler', function () {
       let body
       if (path.includes('1001006')) {
         body = {
-          response: { data: { description: 'XCirc error : There is a problem with your library record.  Please see a librarian.' } }
+          response: { data: { description: 'XCirc error : Bib record cannot be loaded' } }
         }
         throw body
       } else {

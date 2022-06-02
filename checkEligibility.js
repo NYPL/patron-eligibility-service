@@ -19,7 +19,7 @@ async function patronCanPlaceTestHold (patronId, attempt = 1) {
     logger.error('Error: Placing a test hold on a test item did not generate an error!')
     return false
   } catch (e) {
-    patronHoldsPossible = e.response.data.description === 'XCirc error : There is a problem with your library record.  Please see a librarian.'
+    patronHoldsPossible = e.response.data.description === 'XCirc error : Bib record cannot be loaded'
     if (patronHoldsPossible) {
       response = e.response.data
       return true

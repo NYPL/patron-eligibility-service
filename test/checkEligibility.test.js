@@ -112,7 +112,7 @@ describe('checkEligibility', function () {
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
-      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : There is a problem with your library record.  Please see a librarian.' } } }
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
       sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
 
       // Stub login:
