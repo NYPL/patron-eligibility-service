@@ -37,7 +37,7 @@ async function getPatronInfo (patronId) {
   logger.debug(`Fetching patron info for ${patronId}`)
   // wrapper.apiGet does not always return a Promise, so just use callback interface:
   try {
-    const response = await wrapper.get(`patrons/${patronId}`)
+    const response = await wrapper.get(`patrons/${patronId}?fields=id,expirationDate,patronType,moneyOwed,blockInfo`)
     logger.debug(`Fetched patron info for ${patronId}`)
     return response
   } catch (e) {
@@ -66,12 +66,19 @@ async function getPatronHoldsCount (patronId) {
  *   - ptypeDisallowsHolds: True if patron ptype disallows holds (e.g. ptype 120, 121)
  */
 function identifyPatronIssues (info, holdsCount) {
-  const issues = {
-    expired: new Date(info.expirationDate) < new Date(),
-    blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
-    moneyOwed: info.moneyOwed > 15, // may want to change this
-    ptypeDisallowsHolds: ptypeDisallowsHolds(info.patronType),
-    reachedHoldLimit: holdsCount >= process.env.HOLDS_LIMIT
+  let issues
+  if (patronRecordHasNecessaryProps(info)) {
+    issues = {
+      expired: new Date(info.expirationDate) < new Date(),
+      blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
+      moneyOwed: info.moneyOwed > 15, // may want to change this
+      ptypeDisallowsHolds: ptypeDisallowsHolds(info.patronType),
+      reachedHoldLimit: holdsCount >= process.env.HOLDS_LIMIT
+    }
+  } else {
+    issues = {
+      patronRecordIncomplete: true
+    }
   }
 
   // Set a single property to check for consumers that don't care *what* issues
@@ -79,6 +86,11 @@ function identifyPatronIssues (info, holdsCount) {
   issues.hasIssues = Object.values(issues).some((v) => v)
 
   return issues
+}
+
+function patronRecordHasNecessaryProps (info) {
+  const necessaryProps = ['expirationDate', 'blockInfo', 'moneyOwed']
+  return necessaryProps.every(prop => Object.keys(info).includes(prop))
 }
 
 function patronPtypeAllowsHolds (info) {
