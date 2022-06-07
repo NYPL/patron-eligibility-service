@@ -188,7 +188,7 @@ function checkEligibility (patronId) {
       getPatronHoldsCount(patronId)
     ])).then((checks) => {
       const [canPlaceTestHold, ptypeAllowsHolds, holdsCount] = checks
-      const eligible = canPlaceTestHold && ptypeAllowsHolds && patronRecordComplete(patronId)
+      const eligible = canPlaceTestHold && ptypeAllowsHolds && patronRecordComplete(patronInfo)
 
       logger.debug(`Result of checks is ${canPlaceTestHold} && ${ptypeAllowsHolds}`)
 
