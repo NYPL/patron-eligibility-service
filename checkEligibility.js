@@ -67,7 +67,7 @@ async function getPatronHoldsCount (patronId) {
  */
 function identifyPatronIssues (info, holdsCount) {
   let issues
-  if (patronRecordHasNecessaryProps(info)) {
+  if (patronRecordComplete(info)) {
     issues = {
       expired: new Date(info.expirationDate) < new Date(),
       blocked: info.blockInfo.code !== '-', // will want to change this once we have a list of block codes
@@ -88,9 +88,9 @@ function identifyPatronIssues (info, holdsCount) {
   return issues
 }
 
-function patronRecordHasNecessaryProps (info) {
+function patronRecordComplete (info) {
   const necessaryProps = ['expirationDate', 'blockInfo', 'moneyOwed']
-  return necessaryProps.every(prop => Object.keys(info).includes(prop))
+  return necessaryProps.every(prop => Object.keys(info).includes(prop)) === true
 }
 
 function patronPtypeAllowsHolds (info) {
@@ -188,7 +188,7 @@ function checkEligibility (patronId) {
       getPatronHoldsCount(patronId)
     ])).then((checks) => {
       const [canPlaceTestHold, ptypeAllowsHolds, holdsCount] = checks
-      const eligible = canPlaceTestHold && ptypeAllowsHolds
+      const eligible = canPlaceTestHold && ptypeAllowsHolds && patronRecordComplete(patronInfo)
 
       logger.debug(`Result of checks is ${canPlaceTestHold} && ${ptypeAllowsHolds}`)
 

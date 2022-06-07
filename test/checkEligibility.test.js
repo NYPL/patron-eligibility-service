@@ -173,6 +173,30 @@ describe('checkEligibility', function () {
           })
       })
     })
+
+    describe('incomplete patron record', function () {
+      before(function () {
+        // Stub the patron fetch:
+        sinon.stub(wrapper, 'get').callsFake(() => {
+          return {
+            'expirationDate': '2022-04-01',
+            'moneyOwed': 0.0
+          }
+        })
+      })
+
+      after(function () {
+        wrapper.get.restore()
+      })
+
+      it('responds with patronRecordIncomplete', function () {
+        return checkEligibility.checkEligibility(5459252)
+          .then((response) => {
+            expect(response).to.be.a('object')
+            expect(response.eligibility).to.eq(false)
+          })
+      })
+    })
   })
 
   describe('getPatronHoldsCount', function () {
