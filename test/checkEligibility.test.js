@@ -174,7 +174,7 @@ describe('checkEligibility', function () {
       })
     })
 
-    describe.only('incomplete patron record', function () {
+    describe('incomplete patron record', function () {
       before(function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => {
