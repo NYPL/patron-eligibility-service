@@ -128,6 +128,7 @@ describe('checkEligibility', function () {
       before(function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => ({
+          'id': 5459252,
           'expirationDate': '2022-04-01',
           'patronType': 10,
           'blockInfo': { 'code': '-' },
@@ -153,6 +154,7 @@ describe('checkEligibility', function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => {
           return {
+            'id': 5459252,
             'expirationDate': '2022-04-01',
             'patronType': 120,
             'blockInfo': { 'code': '-' },
