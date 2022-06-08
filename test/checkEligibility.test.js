@@ -5,7 +5,25 @@ const wrapper = require('@nypl/sierra-wrapper')
 const kmsHelper = require('../lib/kms-helper')
 const checkEligibility = require('../checkEligibility')
 
+const tomorrow = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+const eligiblePatron = Object.assign(
+  {},
+  require('../test/fixtures/eligible-patron.json'),
+  // Set expirationDate to tomorrow:
+  { expirationDate: tomorrow.toISOString().split('T').shift() }
+)
+
 describe('checkEligibility', function () {
+  before(() => {
+    sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
+      return Promise.resolve('fake decrypted secret')
+    })
+  })
+
+  after(() => {
+    kmsHelper.decrypt.restore()
+  })
+
   describe('ptypeDisallowsHolds', function () {
     it('returns false for typical Researcher/scholar ptypes', function () {
       // Ptype 10 (Adult 18-64 Metro (3 Year)) allows
@@ -26,23 +44,7 @@ describe('checkEligibility', function () {
     let patronInfo
 
     beforeEach(() => {
-      patronInfo = {
-        'data': {
-          'total': 1,
-          'entries': [
-            {
-              'id': 5459252,
-              'expirationDate': '2022-04-01',
-              'birthDate': '1996-11-22',
-              'patronType': 10,
-              'blockInfo': {
-                'code': '-'
-              },
-              'moneyOwed': 0
-            }
-          ]
-        }
-      }
+      patronInfo = JSON.parse(JSON.stringify(eligiblePatron))
 
       process.env.HOLDS_LIMIT = 15
     })
@@ -53,7 +55,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if ptype bars holds', function () {
-      patronInfo['data']['entries'][0]['patronType'] = 120
+      patronInfo['patronType'] = 120
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -61,7 +63,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron owes > $15', function () {
-      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
+      patronInfo['moneyOwed'] = 115.0
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -69,7 +71,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has blocks', function () {
-      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
+      patronInfo['blockInfo']['code'] = 'c'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -77,7 +79,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has expired card', function () {
-      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+      patronInfo['expirationDate'] = '2019-11-25'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -90,10 +92,10 @@ describe('checkEligibility', function () {
     })
 
     it('identifies all four possible issues if patron is the Snake Plissken of borrowing', function () {
-      patronInfo['data']['entries'][0]['patronType'] = 120
-      patronInfo['data']['entries'][0]['moneyOwed'] = 115.0
-      patronInfo['data']['entries'][0]['blockInfo']['code'] = 'c'
-      patronInfo['data']['entries'][0]['expirationDate'] = '2019-11-25'
+      patronInfo['patronType'] = 120
+      patronInfo['moneyOwed'] = 115.0
+      patronInfo['blockInfo']['code'] = 'c'
+      patronInfo['expirationDate'] = '2019-11-25'
 
       const issues = checkEligibility.identifyPatronIssues(patronInfo, 25)
 
@@ -109,51 +111,32 @@ describe('checkEligibility', function () {
 
   describe('checkEligibility', function () {
     before(function () {
-      process.env.SIERRA_BASE = 'https://example.com'
-
-      sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
-        return Promise.resolve('fake decrypted secret')
-      })
-
       // Stub the test hold:
-      const bibCanNotBeLoadedResponse = { description: 'XCirc error : Bib record cannot be loaded' }
-      sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => cb(bibCanNotBeLoadedResponse))
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
 
       // Stub login:
-      sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => cb(null, null))
+      sinon.stub(wrapper, 'authenticate')
     })
 
     after(function () {
-      kmsHelper.decrypt.restore()
-      wrapper.apiPost.restore()
-      wrapper.promiseAuth.restore()
+      wrapper.post.restore()
+      wrapper.authenticate.restore()
     })
 
     describe('eligible ptypes', function () {
       before(function () {
         // Stub the patron fetch:
-        sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-          const goodResponse = {
-            'data': {
-              'entries': [
-                {
-                  'expirationDate': '2022-04-01',
-                  'patronType': 10,
-                  'blockInfo': { 'code': '-' },
-                  'moneyOwed': 0.0
-                }
-              ]
-            }
-          }
-
-          return new Promise((resolve, reject) => {
-            resolve(cb(null, goodResponse))
-          })
-        })
+        sinon.stub(wrapper, 'get').callsFake(() => ({
+          'expirationDate': '2022-04-01',
+          'patronType': 10,
+          'blockInfo': { 'code': '-' },
+          'moneyOwed': 0.0
+        }))
       })
 
       after(function () {
-        wrapper.apiGet.restore()
+        wrapper.get.restore()
       })
 
       it('considers ptype 10 eligible', function () {
@@ -168,31 +151,45 @@ describe('checkEligibility', function () {
     describe('ineligible ptypes', function () {
       before(function () {
         // Stub the patron fetch:
-        sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-          const goodResponse = {
-            'data': {
-              'entries': [
-                {
-                  'expirationDate': '2022-04-01',
-                  'patronType': 120,
-                  'blockInfo': { 'code': '-' },
-                  'moneyOwed': 0.0
-                }
-              ]
-            }
+        sinon.stub(wrapper, 'get').callsFake(() => {
+          return {
+            'expirationDate': '2022-04-01',
+            'patronType': 120,
+            'blockInfo': { 'code': '-' },
+            'moneyOwed': 0.0
           }
-
-          return new Promise((resolve, reject) => {
-            resolve(cb(null, goodResponse))
-          })
         })
       })
 
       after(function () {
-        wrapper.apiGet.restore()
+        wrapper.get.restore()
       })
 
       it('considers ptype 120 ineligible', function () {
+        return checkEligibility.checkEligibility(5459252)
+          .then((response) => {
+            expect(response).to.be.a('object')
+            expect(response.eligibility).to.eq(false)
+          })
+      })
+    })
+
+    describe('incomplete patron record', function () {
+      before(function () {
+        // Stub the patron fetch:
+        sinon.stub(wrapper, 'get').callsFake(() => {
+          return {
+            'expirationDate': '2022-04-01',
+            'moneyOwed': 0.0
+          }
+        })
+      })
+
+      after(function () {
+        wrapper.get.restore()
+      })
+
+      it('responds with patronRecordIncomplete', function () {
         return checkEligibility.checkEligibility(5459252)
           .then((response) => {
             expect(response).to.be.a('object')
@@ -205,25 +202,13 @@ describe('checkEligibility', function () {
   describe('getPatronHoldsCount', function () {
     before(function () {
       // Stub the patron fetch:
-      sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-        const goodResponse = {
-          'data': {
-            'entries': [
-              {
-                'total': 10
-              }
-            ]
-          }
-        }
-
-        return new Promise((resolve, reject) => {
-          resolve(cb(null, goodResponse))
-        })
-      })
+      sinon.stub(wrapper, 'get').callsFake(() => ({
+        'total': 10
+      }))
     })
 
     after(function () {
-      wrapper.apiGet.restore()
+      wrapper.get.restore()
     })
 
     it('returns number of holds for the patron', function () {

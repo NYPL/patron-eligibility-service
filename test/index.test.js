@@ -13,62 +13,49 @@ describe('Lambda index handler', function () {
     sinon.stub(kmsHelper, 'decrypt').callsFake(function (encrypted) {
       return Promise.resolve('fake decrypted secret')
     })
-    sinon.stub(wrapper, 'apiGet').callsFake((path, cb) => {
-      const goodResponse = {
-        'data': {
-          'total': 1,
-          'entries': [
-            {
-              'id': 5459252,
-              'expirationDate': '2022-04-01',
-              'birthDate': '1996-11-22',
-              'patronType': 10,
-              'patronCodes': {
-                'pcode1': '-',
-                'pcode2': 'p',
-                'pcode3': 2,
-                'pcode4': 0
-              },
-              'homeLibraryCode': 'lb',
-              'message': {
-                'code': '-',
-                'accountMessages': [
-                  'digitallionprojectteam@nypl.org'
-                ]
-              },
-              'blockInfo': {
-                'code': 'c'
-              },
-              'moneyOwed': 115.92
-            }
-          ]
-        },
-        'url': 'https://nypl-sierra-test.iii.com/iii/sierra-api/v3/patrons/5459252'
-      }
-
-      return new Promise((resolve, reject) => {
-        resolve(cb(null, goodResponse))
-      })
-    })
-    sinon.stub(wrapper, 'apiPost').callsFake((path, data, cb) => {
+    sinon.stub(wrapper, 'get').callsFake(() => ({
+      'id': 5459252,
+      'expirationDate': '2052-04-01',
+      'birthDate': '1996-11-22',
+      'patronType': 10,
+      'patronCodes': {
+        'pcode1': '-',
+        'pcode2': 'p',
+        'pcode3': 2,
+        'pcode4': 0
+      },
+      'homeLibraryCode': 'lb',
+      'message': {
+        'code': '-',
+        'accountMessages': [
+          'digitallionprojectteam@nypl.org'
+        ]
+      },
+      'blockInfo': {
+        'code': 'c'
+      },
+      'moneyOwed': 115.92
+    }))
+    sinon.stub(wrapper, 'post').callsFake((path, data) => {
       let body
       if (path.includes('1001006')) {
-        body = { description: 'XCirc error : Bib record cannot be loaded' }
+        body = {
+          response: { data: { description: 'XCirc error : Bib record cannot be loaded' } }
+        }
+        throw body
       } else {
         body = { description: 'blahblahblah' }
       }
-      return new Promise((resolve, reject) => { resolve(cb(body, false)) })
+      return body
     })
-    sinon.stub(wrapper, 'promiseAuth').callsFake((cb) => {
-      return cb(null, null)
-    })
+    sinon.stub(wrapper, 'authenticate')
   })
 
   after(function () {
     kmsHelper.decrypt.restore()
-    wrapper.apiPost.restore()
-    wrapper.apiGet.restore()
-    wrapper.promiseAuth.restore()
+    wrapper.post.restore()
+    wrapper.get.restore()
+    wrapper.authenticate.restore()
   })
 
   it('PatronEligibility responds with \'eligible to place holds\' for an eligible patron', function () {

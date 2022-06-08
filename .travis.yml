@@ -1,42 +1,34 @@
 language: node_js
-install: npm install
-script: LOG_LEVEL=error npm test
-cache:
-  directories:
-  - node_modules
-before_deploy:
-- echo "All unit tests passed; Preparing to deploy $ENVIRONMENT_NAME"
-after_success:
-- ENVIRONMENT_NAME=$TRAVIS_BRANCH
-- if [ "$TRAVIS_BRANCH" == "master" ]; then ENVIRONMENT_NAME=production; fi
-- if [ "$ENVIRONMENT_NAME" == "qa" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_QA; AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_QA;
-  fi
-- if [ "$ENVIRONMENT_NAME" == "production" ]; then AWS_KEY_VAR=AWS_ACCESS_KEY_ID_PRODUCTION;
-  AWS_SECRET_VAR=AWS_SECRET_ACCESS_KEY_PRODUCTION; fi
-- echo "Env name is $ENVIRONMENT_NAME and travis is $TRAVIS_BRANCH"
-deploy:
-- provider: script
-  skip_cleanup: true
-  script: "./scripts/travis-deploy.sh $ENVIRONMENT_NAME"
-  on:
-    all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
-- provider: script
-  script: ./node_modules/.bin/node-lambda package -e "$ENVIRONMENT_NAME"
-  skip_cleanup: true
-  on:
-    all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
-- provider: s3
-  access_key_id: "${!AWS_KEY_VAR}"
-  secret_access_key: "${!AWS_SECRET_VAR}"
-  bucket: nypl-travis-builds-$ENVIRONMENT_NAME
-  skip_cleanup: true
-  local_dir: build
-  on:
-    all_branches: true
-    condition: "$ENVIRONMENT_NAME =~ ^qa|production$"
-after_deploy: echo "Successfully executed deploy trigger for $ENVIRONMENT_NAME"
+install:
+- npm i
+before_install:
+- wget https://releases.hashicorp.com/terraform/"$TF_VERSION"/terraform_"$TF_VERSION"_linux_amd64.zip
+- unzip terraform_"$TF_VERSION"_linux_amd64.zip
+- sudo mv terraform /usr/local/bin/
+- rm terraform_"$TF_VERSION"_linux_amd64.zip
+jobs:
+  include:
+  - stage: test
+    script: npm test
+  - stage: deploy qa
+    if: type IN (push) and branch = qa
+    env:
+    - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_QA
+    - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_QA
+    script:
+    - terraform -chdir=provisioning/qa init -input=false
+    - echo "Deploying to qa"
+    - terraform -chdir=provisioning/qa apply -auto-approve -input=false
+  - stage: deploy production
+    if: type IN (push) and branch = main
+    env:
+    - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_PRODUCTION
+    - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_PRODUCTION
+    script:
+    - terraform -chdir=provisioning/production init -input=false
+    - echo "Deploying to production"
+    - terraform -chdir=provisioning/production apply -auto-approve -input=false
 env:
   global:
-    secure: hPIOSp9S/VgTNY23WshBhMhXZAxs7RxHGRJbzO3Fe/IO3FlehhYi5HsaGjkPRRXpbxcRGFCdphzPVIKmATKxWgxjbgonyqlg/hpW9S2L/9bJtk37jT2gMwS7nlnQ0R6/1iRrSM+HYH6qk/6wwphzRH3qa8X3hYlY9XFZSJlY9ugTICss9TaIgB1gmKUstp3VvfsqYvD/+bAGu6MMi++lE/VQDkWGWSFhPfIhSiTvg/CU/Zo4GCiJs2bGE738z3l3ANG6Y9bLbzEgjhcw5CnWAv7etScwLvHrnqXm01ov3TQ4aJcZOwOVELJ3GIuKH1O/UJ5r7SLpB0OtF4lzvPrP70F3nEzDyiEvylquxoxw+6o+oeI6odwQxIQKV2CSLKg79MuPqQHghX03tuTtu9ld2yhFQTMbXmPTDL4vkbYO/x6LooLrmbN9EZw/fKTPaK7xYQtXF1zGNQtl3RUOgWA0ei/0kxcdcI+k6iyfAUSd24vfH22Id+RSLrLWLsw3eDcptjE1ewPZ2Di6rTxtFJh5IE7qVtvWNRoptVzl/YQc5hHxiowIU35/LUxzcbUJ0peRtiustFKBV/JWeMmtFbRJfQ0msLcw0bnwNV/l/gn5W8+ZkJogNrzLseX0iHtHkN/IVIIgojGm0T4VkCSLZcnm3sdX+PDU1CFTOorgVHtAm8Y=
+  - TF_VERSION=1.0.11
+  - secure: YGr/wjEMCdAkrCDmqftpV1l7EYsucJqe6FB2RfFOY8zS7fisGPOz5Ii0qbpTDLJtMIEQbDOlRcFNJJz9hBAm9Ty5R81QjsEBMkt9FUKeafKEATmJqTl7pi243U4d2Q2ZY2WGRvJzT6faSRvm5a7G/iFNlXyuMnW1OZai8mQYlhEAvc8Xt1NAuTB0vv9AYcIvLQzWq/xUd/aB0r2p2ivgqKvZO710vqs9UV9Q3PXQHm7XvqzodstjuqhPS76wivoPSkHUy4B+8OzB7NYT+/4aTIoHl2qPebju4c/KJ/6sEzX64d8Go4X8VIUwH5PDEq8D0BIGEUeuIBlDLydQ5p0N5ST2k3+OEZLEjbEj7aGxB2E8Vf2j16+yaYUlsTKVnbV0hEx1bd6OMVJjeETkt40EyeB5I3OsqXX5m9IMCck/vYoBP0rcZ8IanOORtYISw3c0f2+qj/e1ohSrs19i2jrrYCXUWCL6fCFkXDAtlJO4Ze/ZQKNzEQ/6cpqSVsZoi4qFrLltyaWFYcQ7DPwK3oUbaupt+wB7kQkoDt/wBRCOFzIo2kyoCK6EVe/GwADg9t2vaj0hD6qOPBhZ7BUAI0vHmuSRcKoJF7E1LqTM02+Y1TzEUQhqUyvv8mfIdK1s6IGQcBBYxo3Ih8yQ2zkj68z1nauE7gTdzxMs3Le7Ywlw1tI=
