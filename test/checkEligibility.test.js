@@ -55,7 +55,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if ptype bars holds', function () {
-      patronInfo['patronType'] = 120
+      patronInfo.patronType = 120
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -63,7 +63,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron owes > $15', function () {
-      patronInfo['moneyOwed'] = 115.0
+      patronInfo.moneyOwed = 115.0
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -71,7 +71,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has blocks', function () {
-      patronInfo['blockInfo']['code'] = 'c'
+      patronInfo.blockInfo.code = 'c'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -79,7 +79,7 @@ describe('checkEligibility', function () {
     })
 
     it('identifies issue if patron has expired card', function () {
-      patronInfo['expirationDate'] = '2019-11-25'
+      patronInfo.expirationDate = '2019-11-25'
 
       expect(checkEligibility.identifyPatronIssues(patronInfo)).to.be.a('object')
       expect(checkEligibility.identifyPatronIssues(patronInfo).hasIssues).to.eq(true)
@@ -92,10 +92,10 @@ describe('checkEligibility', function () {
     })
 
     it('identifies all four possible issues if patron is the Snake Plissken of borrowing', function () {
-      patronInfo['patronType'] = 120
-      patronInfo['moneyOwed'] = 115.0
-      patronInfo['blockInfo']['code'] = 'c'
-      patronInfo['expirationDate'] = '2019-11-25'
+      patronInfo.patronType = 120
+      patronInfo.moneyOwed = 115.0
+      patronInfo.blockInfo.code = 'c'
+      patronInfo.expirationDate = '2019-11-25'
 
       const issues = checkEligibility.identifyPatronIssues(patronInfo, 25)
 
@@ -128,10 +128,10 @@ describe('checkEligibility', function () {
       before(function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => ({
-          'expirationDate': '2022-04-01',
-          'patronType': 10,
-          'blockInfo': { 'code': '-' },
-          'moneyOwed': 0.0
+          expirationDate: '2022-04-01',
+          patronType: 10,
+          blockInfo: { code: '-' },
+          moneyOwed: 0.0
         }))
       })
 
@@ -153,10 +153,10 @@ describe('checkEligibility', function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => {
           return {
-            'expirationDate': '2022-04-01',
-            'patronType': 120,
-            'blockInfo': { 'code': '-' },
-            'moneyOwed': 0.0
+            expirationDate: '2022-04-01',
+            patronType: 120,
+            blockInfo: { code: '-' },
+            moneyOwed: 0.0
           }
         })
       })
@@ -179,8 +179,8 @@ describe('checkEligibility', function () {
         // Stub the patron fetch:
         sinon.stub(wrapper, 'get').callsFake(() => {
           return {
-            'expirationDate': '2022-04-01',
-            'moneyOwed': 0.0
+            expirationDate: '2022-04-01',
+            moneyOwed: 0.0
           }
         })
       })
@@ -203,7 +203,7 @@ describe('checkEligibility', function () {
     before(function () {
       // Stub the patron fetch:
       sinon.stub(wrapper, 'get').callsFake(() => ({
-        'total': 10
+        total: 10
       }))
     })
 

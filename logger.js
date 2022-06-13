@@ -1,34 +1,84 @@
 const winston = require('winston')
-winston.emitErrs = false
 
-// Set logLevel to env.LOG_LEVEL - or to the level appropriate for NODE_ENV.
-// Otherwise to 'debug'
-const logLevel = process.env.LOG_LEVEL || {
-  'production': 'info',
-  'test': 'error'
-}[process.env.NODE_ENV] || 'debug'
+// Supress error handling
+// winston.emitErrs = false
+// Set default NYPL agreed upon log levels
+const nyplLogLevels = {
+  levels: {
+    emergency: 0,
+    alert: 1,
+    critical: 2,
+    error: 3,
+    warning: 4,
+    notice: 5,
+    info: 6,
+    debug: 7
+  }
+}
 
-let loggerTransports = []
+const getLogLevelCode = (levelString) => {
+  switch (levelString) {
+    case 'emergency':
+      return 0
+    case 'alert':
+      return 1
+    case 'critical':
+      return 2
+    case 'error':
+      return 3
+    case 'warning':
+      return 4
+    case 'notice':
+      return 5
+    case 'info':
+      return 6
+    case 'debug':
+      return 7
+    default:
+      return 'n/a'
+  }
+}
+
+const timestamp = () => new Date().toISOString()
+const formatter = (options) => {
+  const result = {
+    timestamp: options.timestamp(),
+    levelCode: getLogLevelCode(options.level),
+    level: options.level.toUpperCase()
+  }
+
+  if (process.pid) {
+    result.pid = process.pid.toString()
+  }
+
+  if (options.message) {
+    result.message = options.message
+  }
+
+  return JSON.stringify(result)
+}
+
+const loggerTransports = []
 
 loggerTransports.push(new winston.transports.Console({
-  level: logLevel,
   handleExceptions: true,
   json: false,
+  stringify: true,
   colorize: true,
-  formatter: (options) => {
-    let outputObject = {
-      level: options.level.toUpperCase(),
-      message: options.message,
-      timestamp: new Date().toISOString()
-    }
-
-    return JSON.stringify(Object.assign(outputObject, options.meta))
-  }
+  timestamp,
+  formatter
 }))
 
-const logger = new winston.Logger({
+const logger = winston.createLogger({
+  levels: nyplLogLevels.levels,
   transports: loggerTransports,
   exitOnError: false
 })
 
+/**
+ *  Set logging level (e.g. 'debug','info','warn','error','critical')
+ */
+logger.setLevel = (level) => {
+  logger.transports.forEach((transport) => { transport.level = level })
+}
 module.exports = logger

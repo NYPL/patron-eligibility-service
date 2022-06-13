@@ -137,7 +137,7 @@ function setConfigValue (config, envVariable, key) {
 }
 
 function config () {
-  const config = { 'base': process.env.SIERRA_BASE }
+  const config = { base: process.env.SIERRA_BASE }
   return Promise.all([
     setConfigValue(config, 'SIERRA_KEY', 'key'),
     setConfigValue(config, 'SIERRA_SECRET', 'secret')
