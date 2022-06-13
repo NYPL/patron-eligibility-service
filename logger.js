@@ -81,4 +81,8 @@ const logger = winston.createLogger({
 logger.setLevel = (level) => {
   logger.transports.forEach((transport) => { transport.level = level })
 }
+
+// Set default logging level to 'debug':
+logger.setLevel(process.env.LOG_LEVEL || 'debug')
+
 module.exports = logger
