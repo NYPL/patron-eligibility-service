@@ -20,7 +20,7 @@ app.get('/api/v0.1/patrons/:id/hold-request-eligibility', (req, res) => {
 })
 
 const respond = (response, result, params) => {
-  var contentType = 'application/json'
+  const contentType = 'application/json'
   let httpStatus = 200
 
   if (result instanceof Error) {
