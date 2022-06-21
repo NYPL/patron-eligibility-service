@@ -14,27 +14,27 @@ describe('Lambda index handler', function () {
       return Promise.resolve('fake decrypted secret')
     })
     sinon.stub(wrapper, 'get').callsFake(() => ({
-      'id': 5459252,
-      'expirationDate': '2052-04-01',
-      'birthDate': '1996-11-22',
-      'patronType': 10,
-      'patronCodes': {
-        'pcode1': '-',
-        'pcode2': 'p',
-        'pcode3': 2,
-        'pcode4': 0
+      id: 5459252,
+      expirationDate: '2052-04-01',
+      birthDate: '1996-11-22',
+      patronType: 10,
+      patronCodes: {
+        pcode1: '-',
+        pcode2: 'p',
+        pcode3: 2,
+        pcode4: 0
       },
-      'homeLibraryCode': 'lb',
-      'message': {
-        'code': '-',
-        'accountMessages': [
+      homeLibraryCode: 'lb',
+      message: {
+        code: '-',
+        accountMessages: [
           'digitallionprojectteam@nypl.org'
         ]
       },
-      'blockInfo': {
-        'code': 'c'
+      blockInfo: {
+        code: 'c'
       },
-      'moneyOwed': 115.92
+      moneyOwed: 115.92
     }))
     sinon.stub(wrapper, 'post').callsFake((path, data) => {
       let body
