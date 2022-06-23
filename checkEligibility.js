@@ -23,7 +23,9 @@ async function patronCanPlaceTestHold (patronId, attempt = 1) {
     if (patronHoldsPossible) {
       response = e.response.data
       return true
-    } else logger.error(e)
+    } else {
+      logger.debug(`Recieved error from sierra indicating patron holds are not possible for patron ${patronId}: ${JSON.stringify(e.response.data)}`)
+    }
   } finally {
     logger.debug(`Finished performing patronCanPlaceTestHold with ${patronHoldsPossible ? 'favorable' : 'unfavorable'} response`, response)
   }
