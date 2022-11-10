@@ -4,7 +4,7 @@ const logger = require('./logger')
 const kms = require('./lib/kms-helper')
 const { SierraError, ParameterError } = require('./lib/errors')
 
-async function patronCanPlaceTestHold (patronId, attempt = 1) {
+async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
   logger.debug('Performing patronCanPlaceTestHold')
   const body = {
     recordType: 'i',
@@ -19,12 +19,22 @@ async function patronCanPlaceTestHold (patronId, attempt = 1) {
     logger.error('Error: Placing a test hold on a test item did not generate an error!')
     return false
   } catch (e) {
-    patronHoldsPossible = e.response.data.description === 'XCirc error : Bib record cannot be loaded'
-    if (patronHoldsPossible) {
-      response = e.response.data
-      return true
+    // catch empty response from Sierra
+    if (!e.response) {
+      if (!secondAttempt) {
+        logger.debug('Retrying patronCanPlacTestHold - empty Sierra response')
+        return patronCanPlaceTestHold(patronId, true)
+      } else {
+        throw e
+      }
     } else {
-      logger.debug(`Recieved error from sierra indicating patron holds are not possible for patron ${patronId}: ${JSON.stringify(e.response.data)}`)
+      patronHoldsPossible = e.response.data.description === 'XCirc error : Bib record cannot be loaded'
+      if (patronHoldsPossible) {
+        response = e.response.data
+        return true
+      } else {
+        logger.debug(`Recieved error from sierra indicating patron holds are not possible for patron ${patronId}: ${JSON.stringify(e.response.data)}`)
+      }
     }
   } finally {
     logger.debug(`Finished performing patronCanPlaceTestHold with ${patronHoldsPossible ? 'favorable' : 'unfavorable'} response`, response)
@@ -217,5 +227,6 @@ module.exports = {
   checkEligibility,
   ptypeDisallowsHolds,
   identifyPatronIssues,
-  getPatronHoldsCount
+  getPatronHoldsCount,
+  patronCanPlaceTestHold
 }

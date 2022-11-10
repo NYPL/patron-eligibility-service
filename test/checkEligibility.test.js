@@ -108,7 +108,6 @@ describe('checkEligibility', function () {
       expect(issues.reachedHoldLimit).to.eq(true)
     })
   })
-
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
@@ -216,6 +215,22 @@ describe('checkEligibility', function () {
         .then((response) => {
           expect(response).to.eq(10)
         })
+    })
+  })
+  describe.only('patronCanPlaceTestHold', () => {
+    let postRequest
+    before(() => {
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws({})
+    })
+    after(() => {
+      wrapper.post.restore()
+    })
+    it('should retry patronCanPlaceTestHold once and then error', () => {
+      before(() => {
+        postRequest.onCall(1).throws({})
+      })
+      checkEligibility.patronCanPlaceTestHold('123456')
+      expect(postRequest.callCount).to.eq(2)
     })
   })
 })
