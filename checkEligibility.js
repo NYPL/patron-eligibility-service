@@ -16,7 +16,6 @@ async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
   let response
   try {
     response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
-    console.log(response)
     logger.error('Error: Placing a test hold on a test item did not generate an error!')
     return false
   } catch (e) {

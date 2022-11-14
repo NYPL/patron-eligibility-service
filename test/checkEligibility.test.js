@@ -223,7 +223,11 @@ describe('checkEligibility', function () {
   })
   describe('patronCanPlaceTestHold', () => {
     let postRequest
-    afterEach(() => { postRequest.restore() })
+    let loggerSpy
+    afterEach(() => {
+      postRequest.restore()
+      if (loggerSpy) loggerSpy.restore()
+    })
     it('should retry patronCanPlaceTestHold once and then error', async () => {
       postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
       postRequest.onCall(1).throws()
@@ -232,16 +236,25 @@ describe('checkEligibility', function () {
       await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.be.rejectedWith(Error)
       expect(postRequest.callCount).to.eq(2)
     })
-    it('should retry patronCanPlaceTestHold and then proceed', async () => {
+    it('should retry patronCanPlaceTestHold and then proceed - success', async () => {
       const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
       postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
       postRequest.onCall(1).throws(testHoldErrorResponse)
 
-      const loggerSpy = sinon.spy(logger, 'error')
+      loggerSpy = sinon.spy(logger, 'error')
       // one empty error and one known error should not throw
       // but instead call logger.error and return true
       await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
       expect(loggerSpy.calledWith(testHoldErrorResponse))
+    })
+    it('should retry patronCanPlaceTestHold and then proceed - failure', async () => {
+      loggerSpy = sinon.spy(logger, 'error')
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).returns('meepmorp')
+      // one empty error and one known error should not throw
+      // but instead call logger.error and return true
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(false)
+      expect(loggerSpy.calledWith({ level: 'error', message: 'Error: Placing a test hold on a test item did not generate an error!' }))
     })
   })
 })
