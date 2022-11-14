@@ -16,14 +16,17 @@ async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
   let response
   try {
     response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
+    console.log(response)
     logger.error('Error: Placing a test hold on a test item did not generate an error!')
     return false
   } catch (e) {
     // catch empty response from Sierra
     if (!e.response) {
+      // don't want to try post requests more than once
       if (!secondAttempt) {
         logger.debug('Retrying patronCanPlacTestHold - empty Sierra response')
-        return patronCanPlaceTestHold(patronId, true)
+        return await patronCanPlaceTestHold(patronId, true)
+        // second empty response triggers hard error
       } else {
         throw e
       }

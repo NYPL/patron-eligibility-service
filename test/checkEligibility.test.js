@@ -1,9 +1,13 @@
 /* eslint-env mocha */
 const sinon = require('sinon')
 const wrapper = require('@nypl/sierra-wrapper')
+const { use, expect } = require('chai')
+const chaiAsPromised = require('chai-as-promised')
+use(chaiAsPromised)
 
 const kmsHelper = require('../lib/kms-helper')
 const checkEligibility = require('../checkEligibility')
+const logger = require('../logger')
 
 const tomorrow = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
 const eligiblePatron = Object.assign(
@@ -217,20 +221,27 @@ describe('checkEligibility', function () {
         })
     })
   })
-  describe.only('patronCanPlaceTestHold', () => {
+  describe('patronCanPlaceTestHold', () => {
     let postRequest
-    before(() => {
-      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws({})
-    })
-    after(() => {
-      wrapper.post.restore()
-    })
-    it('should retry patronCanPlaceTestHold once and then error', () => {
-      before(() => {
-        postRequest.onCall(1).throws({})
-      })
-      checkEligibility.patronCanPlaceTestHold('123456')
+    afterEach(() => { postRequest.restore() })
+    it('should retry patronCanPlaceTestHold once and then error', async () => {
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws()
+
+      // two empty errors should cause hard error
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.be.rejectedWith(Error)
       expect(postRequest.callCount).to.eq(2)
+    })
+    it('should retry patronCanPlaceTestHold and then proceed', async () => {
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws(testHoldErrorResponse)
+
+      const loggerSpy = sinon.spy(logger, 'error')
+      // one empty error and one known error should not throw
+      // but instead call logger.error and return true
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
+      expect(loggerSpy.calledWith(testHoldErrorResponse))
     })
   })
 })
