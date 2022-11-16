@@ -4,7 +4,7 @@ const logger = require('./logger')
 const kms = require('./lib/kms-helper')
 const { SierraError, ParameterError } = require('./lib/errors')
 
-async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
+async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
   logger.debug('Performing patronCanPlaceTestHold')
   const body = {
     recordType: 'i',
@@ -22,9 +22,9 @@ async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
     // catch empty response from Sierra
     if (!e.response) {
       // don't want to try post requests more than once
-      if (!secondAttempt) {
+      if (firstAttempt) {
         logger.info('Retrying patronCanPlacTestHold - empty Sierra response')
-        return await patronCanPlaceTestHold(patronId, true)
+        return await patronCanPlaceTestHold(patronId, false)
         // second empty response triggers hard error
       } else {
         throw e
