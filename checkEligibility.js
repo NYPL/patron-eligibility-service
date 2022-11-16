@@ -23,7 +23,7 @@ async function patronCanPlaceTestHold (patronId, secondAttempt = false) {
     if (!e.response) {
       // don't want to try post requests more than once
       if (!secondAttempt) {
-        logger.debug('Retrying patronCanPlacTestHold - empty Sierra response')
+        logger.info('Retrying patronCanPlacTestHold - empty Sierra response')
         return await patronCanPlaceTestHold(patronId, true)
         // second empty response triggers hard error
       } else {
