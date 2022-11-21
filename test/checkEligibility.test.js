@@ -1,9 +1,13 @@
 /* eslint-env mocha */
 const sinon = require('sinon')
 const wrapper = require('@nypl/sierra-wrapper')
+const { use, expect } = require('chai')
+const chaiAsPromised = require('chai-as-promised')
+use(chaiAsPromised)
 
 const kmsHelper = require('../lib/kms-helper')
 const checkEligibility = require('../checkEligibility')
+const logger = require('../logger')
 
 const tomorrow = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
 const eligiblePatron = Object.assign(
@@ -108,7 +112,6 @@ describe('checkEligibility', function () {
       expect(issues.reachedHoldLimit).to.eq(true)
     })
   })
-
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
@@ -216,6 +219,42 @@ describe('checkEligibility', function () {
         .then((response) => {
           expect(response).to.eq(10)
         })
+    })
+  })
+  describe('patronCanPlaceTestHold', () => {
+    let postRequest
+    let loggerSpy
+    afterEach(() => {
+      postRequest.restore()
+      if (loggerSpy) loggerSpy.restore()
+    })
+    it('should retry patronCanPlaceTestHold once and then error', async () => {
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws()
+
+      // two empty errors should cause hard error
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.be.rejectedWith(Error)
+      expect(postRequest.callCount).to.eq(2)
+    })
+    it('should retry patronCanPlaceTestHold and then proceed - success', async () => {
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws(testHoldErrorResponse)
+
+      loggerSpy = sinon.spy(logger, 'error')
+      // one empty error and one known error should not throw
+      // but instead call logger.error and return true
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
+      expect(loggerSpy.calledWith(testHoldErrorResponse))
+    })
+    it('should retry patronCanPlaceTestHold and then proceed - failure', async () => {
+      loggerSpy = sinon.spy(logger, 'error')
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).returns('meepmorp')
+      // one empty error and one known error should not throw
+      // but instead call logger.error and return true
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(false)
+      expect(loggerSpy.calledWith({ level: 'error', message: 'Error: Placing a test hold on a test item did not generate an error!' }))
     })
   })
 })
