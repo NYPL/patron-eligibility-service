@@ -23,7 +23,7 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
     if (!e.response) {
       // don't want to try post requests more than once
       if (firstAttempt) {
-        logger.info('Retrying patronCanPlacTestHold - empty Sierra response')
+        logger.info('Retrying patronCanPlaceTestHold - empty Sierra response')
         return await patronCanPlaceTestHold(patronId, false)
         // second empty response triggers hard error
       } else {
@@ -185,6 +185,7 @@ async function sierraLogin () {
  *   2. Does patron's ptype allow them to place holds?
  */
 function checkEligibility (patronId) {
+  console.log('spaghet')
   let patronInfo = null
   return config()
     .then(sierraLogin)
