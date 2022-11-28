@@ -27,6 +27,7 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
         return await patronCanPlaceTestHold(patronId, false)
         // second empty response triggers hard error
       } else {
+        logger.info('Received two empty responses from Sierra. Returning true for eligibility')
         return true
       }
     } else {
