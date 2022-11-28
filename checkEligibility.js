@@ -27,7 +27,7 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
         return await patronCanPlaceTestHold(patronId, false)
         // second empty response triggers hard error
       } else {
-        throw e
+        return true
       }
     } else {
       patronHoldsPossible = e.response.data.description === 'XCirc error : Bib record cannot be loaded'
