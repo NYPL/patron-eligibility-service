@@ -23,11 +23,12 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
     if (!e.response) {
       // don't want to try post requests more than once
       if (firstAttempt) {
-        logger.info('Retrying patronCanPlacTestHold - empty Sierra response')
+        logger.info('Retrying patronCanPlaceTestHold - empty Sierra response')
         return await patronCanPlaceTestHold(patronId, false)
         // second empty response triggers hard error
       } else {
-        throw e
+        logger.info('Received two empty responses from Sierra. Returning true for eligibility')
+        return true
       }
     } else {
       patronHoldsPossible = e.response.data.description === 'XCirc error : Bib record cannot be loaded'
