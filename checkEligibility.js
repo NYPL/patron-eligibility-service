@@ -186,7 +186,6 @@ async function sierraLogin () {
  *   2. Does patron's ptype allow them to place holds?
  */
 function checkEligibility (patronId) {
-  console.log('spaghet')
   let patronInfo = null
   return config()
     .then(sierraLogin)
