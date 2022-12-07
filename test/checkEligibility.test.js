@@ -1,9 +1,13 @@
 /* eslint-env mocha */
 const sinon = require('sinon')
 const wrapper = require('@nypl/sierra-wrapper')
+const { use, expect } = require('chai')
+const chaiAsPromised = require('chai-as-promised')
+use(chaiAsPromised)
 
 const kmsHelper = require('../lib/kms-helper')
 const checkEligibility = require('../checkEligibility')
+const logger = require('../logger')
 
 const tomorrow = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
 const eligiblePatron = Object.assign(
@@ -108,7 +112,6 @@ describe('checkEligibility', function () {
       expect(issues.reachedHoldLimit).to.eq(true)
     })
   })
-
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
@@ -216,6 +219,36 @@ describe('checkEligibility', function () {
         .then((response) => {
           expect(response).to.eq(10)
         })
+    })
+  })
+  describe('patronCanPlaceTestHold', () => {
+    let postRequest
+    let loggerSpy
+    afterEach(() => {
+      postRequest.restore()
+      if (loggerSpy) loggerSpy.restore()
+    })
+    it('should return true after two empty responses', async () => {
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws()
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
+      expect(postRequest.callCount).to.eq(2)
+    })
+    it('should return true after one empty and one error we are looking for', async () => {
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws(testHoldErrorResponse)
+
+      loggerSpy = sinon.spy(logger, 'error')
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
+      expect(loggerSpy.calledWith(testHoldErrorResponse))
+    })
+    it('should return false after one empty and one non-error response', async () => {
+      loggerSpy = sinon.spy(logger, 'error')
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).returns('a response instead of the error we are looking for')
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(false)
+      expect(loggerSpy.calledWith({ level: 'error', message: 'Error: Placing a test hold on a test item did not generate an error!' }))
     })
   })
 })
