@@ -27,8 +27,6 @@ jobs:
           role-to-assume: arn:aws:iam::946183545209:role/GithubActionsDeployerRole
           aws-region: us-east-1
       - uses: actions/checkout@v3
-      - name: Package app
-        run: bash provisioning/package.sh
       - uses: hashicorp/setup-terraform@v2
       - name: Deploy app to QA
         run: |
