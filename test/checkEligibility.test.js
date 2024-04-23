@@ -115,7 +115,7 @@ describe('checkEligibility', function () {
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
-      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      const testHoldErrorResponse = { response: { data: { description: 'Bib record cannot be loaded' } } }
       sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
 
       // Stub login:
@@ -235,7 +235,7 @@ describe('checkEligibility', function () {
       expect(postRequest.callCount).to.eq(2)
     })
     it('should return true after one empty and one error we are looking for', async () => {
-      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      const testHoldErrorResponse = { response: { data: { description: 'Bib record cannot be loaded' } } }
       postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
       postRequest.onCall(1).throws(testHoldErrorResponse)
 
