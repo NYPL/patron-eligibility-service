@@ -28,6 +28,8 @@ jobs:
           aws-region: us-east-1
       - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v2
+      - name: npm install
+        run: npm ci
       - name: Deploy app to QA
         run: |
           terraform -chdir=provisioning/qa init -input=false
