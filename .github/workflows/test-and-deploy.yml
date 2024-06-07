@@ -34,3 +34,24 @@ jobs:
         run: |
           terraform -chdir=provisioning/qa init -input=false
           terraform -chdir=provisioning/qa apply -auto-approve -input=false
+  deploy-production:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: arn:aws:iam::946183545209:role/GithubActionsDeployerRole
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+      - uses: hashicorp/setup-terraform@v2
+      - name: npm install
+        run: npm ci
+      - name: Deploy app to Production
+        run: |
+          terraform -chdir=provisioning/production init -input=false
+          terraform -chdir=provisioning/production apply -auto-approve -input=false
