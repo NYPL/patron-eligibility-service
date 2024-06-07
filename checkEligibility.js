@@ -32,7 +32,12 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
       }
     } else {
       const { description, name } = e.response.data
-      patronHoldsPossible = (description === 'Bib record cannot be loaded' && name === 'XCirc error')
+      patronHoldsPossible = (
+        description.includes('Bib record cannot be loaded')
+      ) && (
+        name === 'XCirc error' || description.includes('XCirc error')
+      )
+
       if (patronHoldsPossible) {
         response = e.response.data
         return true
