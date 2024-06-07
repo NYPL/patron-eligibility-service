@@ -48,7 +48,7 @@ Run all unit tests:
 
 ## Contributing
 
-This repo uses the [Development-QA-Main Git Workflow](https://github.com/NYPL/engineering-general/blob/master/standards/git-workflow.md#development-qa-main).
+This repo uses the [PRs-Target-Main-Merge-To-Deployment-Branches Workflow](https://github.com/NYPL/engineering-general/blob/master/standards/git-workflow.md#prs-target-main-merge-to-deployment-branches)
 
 ## Deployment
 
