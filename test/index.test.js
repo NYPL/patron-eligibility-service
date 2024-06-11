@@ -43,6 +43,11 @@ describe('Lambda index handler', function () {
           response: { data: { description: 'Bib record cannot be loaded', name: 'XCirc error' } }
         }
         throw body
+      } else if (path.includes('1001007')) {
+        body = {
+          response: { data: { description: 'XCirc error: Bib record cannot be loaded' } }
+        }
+        throw body
       } else {
         body = { description: 'blahblahblah' }
       }
@@ -65,6 +70,15 @@ describe('Lambda index handler', function () {
         expect(JSON.parse(result.body)).to.include({ eligibility: true })
       })
   })
+
+  it('PatronEligibility responds with \'eligible to place holds\' for an eligible patron when response includes XCirc in description', function () {
+    return LambdaTester(handler)
+      .event({ path: '/api/v0.1/patrons/1001007/hold-request-eligibility' })
+      .expectResult((result) => {
+        expect(JSON.parse(result.body)).to.include({ eligibility: true })
+      })
+  })
+
   it('PatronEligibility responds with a string representation of an errors object for an ineligible patron', function () {
     return LambdaTester(handler)
       .event({ path: '/api/v0.1/patrons/5459252/hold-request-eligibility' })
