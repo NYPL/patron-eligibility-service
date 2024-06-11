@@ -112,10 +112,51 @@ describe('checkEligibility', function () {
       expect(issues.reachedHoldLimit).to.eq(true)
     })
   })
+
+  describe('checkEligibility when response includes XCirc in description', function () {
+    before(function () {
+      // Stub the test hold:
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error: Bib record cannot be loaded' } } }
+      sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
+
+      // Stub login:
+      sinon.stub(wrapper, 'authenticate')
+    })
+
+    after(function () {
+      wrapper.post.restore()
+      wrapper.authenticate.restore()
+    })
+
+    describe('eligible ptypes', function () {
+      before(function () {
+        // Stub the patron fetch:
+        sinon.stub(wrapper, 'get').callsFake(() => ({
+          expirationDate: '2022-04-01',
+          patronType: 10,
+          blockInfo: { code: '-' },
+          moneyOwed: 0.0
+        }))
+      })
+
+      after(function () {
+        wrapper.get.restore()
+      })
+
+      it('considers ptype 10 eligible', function () {
+        return checkEligibility.checkEligibility(5459252)
+          .then((response) => {
+            expect(response).to.be.a('object')
+            expect(response.eligibility).to.eq(true)
+          })
+      })
+    })
+  })
+
   describe('checkEligibility', function () {
     before(function () {
       // Stub the test hold:
-      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      const testHoldErrorResponse = { response: { data: { description: 'Bib record cannot be loaded', name: 'XCirc error' } } }
       sinon.stub(wrapper, 'post').throws(testHoldErrorResponse)
 
       // Stub login:
@@ -221,6 +262,27 @@ describe('checkEligibility', function () {
         })
     })
   })
+
+  describe('patronCanPlaceTestHold when response includes XCirc in description', () => {
+    let postRequest
+    let loggerSpy
+
+    afterEach(() => {
+      postRequest.restore()
+      if (loggerSpy) loggerSpy.restore()
+    })
+
+    it('should return true after one empty and one error we are looking for', async () => {
+      const testHoldErrorResponse = { response: { data: { description: 'XCirc error: Bib record cannot be loaded' } } }
+      postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
+      postRequest.onCall(1).throws(testHoldErrorResponse)
+
+      loggerSpy = sinon.spy(logger, 'error')
+      await expect(checkEligibility.patronCanPlaceTestHold(5459252)).to.eventually.equal(true)
+      expect(loggerSpy.calledWith(testHoldErrorResponse))
+    })
+  })
+
   describe('patronCanPlaceTestHold', () => {
     let postRequest
     let loggerSpy
@@ -235,7 +297,7 @@ describe('checkEligibility', function () {
       expect(postRequest.callCount).to.eq(2)
     })
     it('should return true after one empty and one error we are looking for', async () => {
-      const testHoldErrorResponse = { response: { data: { description: 'XCirc error : Bib record cannot be loaded' } } }
+      const testHoldErrorResponse = { response: { data: { description: 'Bib record cannot be loaded', name: 'XCirc error' } } }
       postRequest = sinon.stub(wrapper, 'post').onCall(0).throws()
       postRequest.onCall(1).throws(testHoldErrorResponse)
 
