@@ -32,6 +32,11 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
       }
     } else {
       const { description, name } = e.response.data
+      // In Sierra <6.1, the error is: { description: "XCirc error : Bib record cannot..."}
+      // In Sierra 6.1, the error is { name: "XCirc error", description: "Bib record cannot..."}
+      // We are making this a little more flexible in case there are other similar variants, but
+      // anything including "XCirc error" and "Bib record cannot be loaded" in the description should
+      // be fine
       patronHoldsPossible = (
         description.includes('Bib record cannot be loaded')
       ) && (
