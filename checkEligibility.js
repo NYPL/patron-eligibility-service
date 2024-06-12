@@ -43,7 +43,6 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
         name === 'XCirc error' || description.includes('XCirc error')
       )
 
-
       if (patronHoldsPossible) {
         response = e.response.data
         return true
