@@ -37,7 +37,7 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
       // We are making this a little more flexible in case there are other similar variants, but
       // anything including "XCirc error" and "Bib record cannot be loaded" in the description should
       // be fine
-      patronHoldsPossible = (
+      patronHoldsPossible = description && (
         description.includes('Bib record cannot be loaded')
       ) && (
         name === 'XCirc error' || description.includes('XCirc error')
