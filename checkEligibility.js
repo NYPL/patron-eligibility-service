@@ -197,6 +197,9 @@ async function sierraLogin () {
  *   2. Does patron's ptype allow them to place holds?
  */
 function checkEligibility (patronId) {
+  if (patronId === undefined) {
+    throw new ParameterError('Could not get patron info for undefined patronId')
+  }
   let patronInfo = null
   return config()
     .then(sierraLogin)

@@ -241,6 +241,13 @@ describe('checkEligibility', function () {
           })
       })
     })
+
+    describe('undefined patron id', function () {
+      it('responds with patronRecordIncomplete', function () {
+        return expect(() => checkEligibility.checkEligibility(undefined))
+          .to.throw('Could not get patron info for undefined patronId')
+      })
+    })
   })
 
   describe('getPatronHoldsCount', function () {
