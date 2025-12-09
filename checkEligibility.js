@@ -17,6 +17,7 @@ async function patronCanPlaceTestHold (patronId, firstAttempt = true) {
   try {
     response = await wrapper.post(`patrons/${patronId}/holds/requests`, body)
     logger.error('Error: Placing a test hold on a test item did not generate an error!')
+    console.log('Resp: ', response)
     return false
   } catch (e) {
     // catch empty response from Sierra
@@ -168,6 +169,10 @@ function config () {
     setConfigValue(config, 'SIERRA_KEY', 'key'),
     setConfigValue(config, 'SIERRA_SECRET', 'secret')
   ])
+    .then((c) => {
+      console.log('Got config: ', config)
+      return c
+    })
     .then(values => wrapper.config(config))
 }
 
