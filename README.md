@@ -1,3 +1,7 @@
+# Deprecated
+
+| As of May 2026, this app's functionality is taken over by [PatronServices](https://github.com/NYPL/PatronServices)
+
 # NYPL Patron Eligibility Service
 
 This package is intended to be used as a Lambda-based Node.js service.
